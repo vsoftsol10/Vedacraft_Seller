@@ -1,0 +1,27 @@
+import "dotenv/config";
+import express from "express";
+import cors from "cors";
+import productRoutes from "./routes/productroutes.js";
+import authRoutes from "./routes/authRoutes.js";
+
+const app = express();
+const allowedOrigins = (process.env.CLIENT_ORIGIN || process.env.CLIENT_URL || "http://localhost:5173").split(",");
+
+app.use(cors({ origin: allowedOrigins }));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use("/api/auth", authRoutes);
+app.use("/api/products", productRoutes);
+app.get("/", (_req, res) => res.send("Veda Crafts API is running"));
+
+app.use((error, _req, res, _next) => {
+  console.error(error);
+  const duplicate = error.code === "23505";
+  res.status(duplicate ? 409 : error.status || 500).json({
+    success: false,
+    message: duplicate ? "Duplicate SKU or Product ID" : error.message || "Something went wrong",
+  });
+});
+
+const port = process.env.PORT || 5000;
+app.listen(port, () => console.log(`Server running on port ${port}`));

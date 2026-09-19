@@ -1,0 +1,7 @@
+PORT=5000
+CLIENT_ORIGIN=http://localhost:5173
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+SUPABASE_PRODUCT_IMAGES_BUCKET=product-images
+# Must match the key used with pgp_sym_encrypt() for seller_credentials.encrypted_password.
+SELLER_PASSWORD_ENCRYPTION_KEY=your-server-only-password-encryption-key

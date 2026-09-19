@@ -1,0 +1,23 @@
+{
+  "name": "vedacrafts-backend",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "@prisma/client": "^5.19.1",
+    "@supabase/supabase-js": "^2.45.4",
+    "bullmq": "^5.12.12",
+    "express-rate-limit": "^7.4.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "multer": "^2.0.2"
+  },
+  "devDependencies": {
+    "prisma": "^5.19.1"
+  }
+}
