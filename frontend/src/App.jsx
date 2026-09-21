@@ -10,7 +10,6 @@ import {
   Star,
   Ticket,
   Settings,
-  LifeBuoy,
   Bell,
   ChevronDown,
   LogOut,
@@ -20,7 +19,12 @@ import Dashboard from "./pages/Dashboard"
 import AddProduct from "./components/products/Addproduct";
 import Orders from "./pages/Order"
 import Login from "./pages/Login";
-import "./styles/app.css";
+import Profile from "./pages/Profile";
+import { clearSellerSession } from "./api/productapi";
+
+const NAV_ITEM = "mb-1 flex items-center gap-[10px] rounded-lg px-3 py-2.5 text-sm text-[#444] no-underline hover:bg-[#f5f5f5]";
+const ACTIVE_NAV_ITEM = "bg-[#e4f4e2] font-semibold text-[#2f7a3c]";
+const SETTINGS_BUTTON = `${NAV_ITEM} w-full cursor-pointer border-0 bg-transparent text-left font-[inherit]`;
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutGrid },
@@ -61,50 +65,49 @@ function SellerPortal() {
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
   const logout = () => {
-    sessionStorage.removeItem("vedacraftsSeller");
-    sessionStorage.removeItem("vedacraftsSellerSettings");
+    clearSellerSession();
     navigate("/login", { replace: true });
   };
 
   return (
-      <div className="app-shell">
-        <aside className="sidebar">
-          <div className="brand">
-            <span className="brand-name">Veda<span className="brand-accent">Crafts</span></span>
-            <span className="brand-tagline">Connect | Collaborate | Grow</span>
+      <div className="flex min-h-screen">
+        <aside className="sticky top-0 flex h-screen w-60 shrink-0 self-start flex-col overflow-y-auto border-r border-[#eee] bg-white px-4 py-6">
+          <div className="mb-4 border-b border-[#eee] px-2 pb-6">
+            <span className="text-[22px] font-bold text-[#f2a93b]">Veda<span className="text-[#4f9d5d]">Crafts</span></span>
+            <span className="mt-0.5 block text-[11px] text-[#999]">Connect | Collaborate | Grow</span>
           </div>
-          <nav>
+          <nav className="flex-1">
             {navItems.map(({ to, label, icon: Icon }) => label === "Settings" ? (
-              <div className="settings-nav-group" key={to}>
-                <button type="button" className="nav-item settings-nav-toggle" onClick={() => setSettingsOpen((open) => !open)} aria-expanded={settingsOpen}>
-                  <Icon size={18} /> <span>Settings</span><ChevronDown size={16} className={settingsOpen ? "settings-chevron open" : "settings-chevron"} />
+              <div key={to}>
+                <button type="button" className={SETTINGS_BUTTON} onClick={() => setSettingsOpen((open) => !open)} aria-expanded={settingsOpen}>
+                  <Icon size={18} /> <span className="flex-1">Settings</span><ChevronDown size={16} className={`transition-transform duration-200 ${settingsOpen ? "rotate-180" : ""}`} />
                 </button>
-                {settingsOpen && <div className="settings-subnav">
-                  <button type="button">Profile</button>
-                  <button type="button">Business Information</button>
-                  <button type="button">Bank Details</button>
-                  <button type="button">Selling Location</button>
+                {settingsOpen && <div className="mb-1.5 ml-[34px] grid -mt-px gap-0.5">
+                  <NavLink to="/settings/profile" className={({ isActive }) => `rounded-md px-2.5 py-[7px] text-left text-xs text-[#666] no-underline hover:bg-[#f1f8f0] hover:font-semibold hover:text-[#2f7a3c]${isActive ? " bg-[#f1f8f0] font-semibold text-[#2f7a3c]" : ""}`}>Profile</NavLink>
+                  <button type="button" className="cursor-pointer rounded-md border-0 bg-transparent px-2.5 py-[7px] text-left font-[inherit] text-xs text-[#666] hover:bg-[#f1f8f0] hover:font-semibold hover:text-[#2f7a3c]">Business Information</button>
+                  <button type="button" className="cursor-pointer rounded-md border-0 bg-transparent px-2.5 py-[7px] text-left font-[inherit] text-xs text-[#666] hover:bg-[#f1f8f0] hover:font-semibold hover:text-[#2f7a3c]">Bank Details</button>
+                  <button type="button" className="cursor-pointer rounded-md border-0 bg-transparent px-2.5 py-[7px] text-left font-[inherit] text-xs text-[#666] hover:bg-[#f1f8f0] hover:font-semibold hover:text-[#2f7a3c]">Selling Location</button>
                 </div>}
               </div>
             ) : (
-              <NavLink key={to} to={to} className={({ isActive }) => `nav-item${isActive ? " active" : ""}`}>
+              <NavLink key={to} to={to} className={({ isActive }) => `${NAV_ITEM}${isActive ? ` ${ACTIVE_NAV_ITEM}` : ""}`}>
                 <Icon size={18} /> {label}
               </NavLink>
             ))}
           </nav>
-          <button type="button" className="nav-item logout-button" onClick={logout}>
+          <button type="button" className={`${NAV_ITEM} mt-4 w-full cursor-pointer border-0 bg-transparent text-left font-[inherit] text-[#b42318] hover:bg-[#fff1f0] hover:text-[#b42318]`} onClick={logout}>
             <LogOut size={18} /> Logout
           </button>
         </aside>
 
-        <main className="main-content">
-          <header className="topbar">
-            <div className="topbar-search">
-              <input placeholder="Search" />
+        <main className="flex-1 px-8 py-6">
+          <header className="sticky top-0 z-20 -mx-8 -mt-6 mb-5 flex items-center justify-between gap-4 border-b border-[#e5e7eb] bg-white px-8 py-4">
+            <div className="max-w-[500px] flex-1">
+              <input className="w-full rounded-lg border border-[#e5e5e5] px-3.5 py-2.5 text-sm" placeholder="Search" />
             </div>
-            <div className="topbar-actions">
+            <div className="flex items-center gap-4">
               <Bell size={20} />
-              <div className="avatar" />
+              <div className="h-9 w-9 rounded-full bg-[#ddd]" />
             </div>
           </header>
 
@@ -115,6 +118,7 @@ function SellerPortal() {
             <Route path="/products/add" element={<AddProduct />} />
             <Route path="/products/:id/edit" element={<AddProduct />} />
             <Route path="/orders" element={<Orders />} />
+            <Route path="/settings/profile" element={<Profile />} />
 
           </Routes>
         </main>
