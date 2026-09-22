@@ -1,11 +1,19 @@
 import { useEffect, useState } from "react";
+<<<<<<< HEAD
+=======
+import { IndianRupee, Package, ShoppingBag, Star } from "lucide-react";
+>>>>>>> 78e1cc33d0dad5fb46c601957e814d18b2277c7a
 import OrderStatCard from "../components/orders/Orderstatcard";
 import OrdersToolbar from "../components/orders/Orderstoolbar";
 import OrdersTable from "../components/orders/Orderstable";
 import OrderDetails from "../components/orders/Orderdetails";
+<<<<<<< HEAD
 import { ORDER_STAT_CARDS } from "../components/orders/Ordersconstants";
 import { getOrders } from "../api/orderapi";
 import "../styles/orders.css";
+=======
+import { getOrders, updateOrderStatus } from "../api/orderapi";
+>>>>>>> 78e1cc33d0dad5fb46c601957e814d18b2277c7a
 
 export default function Order() {
   const [query, setQuery] = useState("");
@@ -68,25 +76,49 @@ export default function Order() {
       .toLowerCase()
       .includes(query.toLowerCase())
   );
+  const countByStatus = (statuses) => orders.filter((order) => statuses.includes(String(order.status).toLowerCase())).length;
+  const handleUpdateStatus = async (orderId, status) => {
+    setError("");
+    const response = await updateOrderStatus(orderId, status);
+    const updatedStatus = response.data?.status || status;
+    setOrders((currentOrders) => currentOrders.map((order) =>
+      order.rawId === orderId ? { ...order, status: updatedStatus } : order
+    ));
+    setSelectedOrder((currentOrder) => currentOrder && currentOrder.rawId === orderId
+      ? { ...currentOrder, status: updatedStatus }
+      : currentOrder);
+  };
+  const statCards = [
+    { key: "new", label: "New Order", value: countByStatus(["placed", "processing", "packed"]), icon: ShoppingBag, iconClass: "bg-[#fef3c7] text-[#d97706]" },
+    { key: "shipped", label: "Shipped", value: countByStatus(["shipped"]), icon: IndianRupee, iconClass: "bg-[#d1fae5] text-[#059669]" },
+    { key: "delivered", label: "Delivered", value: countByStatus(["delivered"]), icon: Package, iconClass: "bg-[#d1fae5] text-[#059669]" },
+    { key: "returned", label: "Returned", value: countByStatus(["returned"]), icon: Star, iconClass: "bg-[#fef3c7] text-[#d97706]" },
+  ];
 
   return (
-    <div className="orders-page">
-      <div className="orders-page__header">
-        <h1>Orders</h1>
-        <p>Manage customer orders and track deliveries</p>
+    <div className="flex flex-col gap-6">
+      <div>
+        <h1 className="m-0 text-[30px] font-bold text-[#111827]">Orders</h1>
+        <p className="mb-0 mt-1 text-[#6b7280]">Manage customer orders and track deliveries</p>
       </div>
 
-      <div className="orders-page__stats">
-        {ORDER_STAT_CARDS.map((card) => (
-          <OrderStatCard key={card.key} {...card} />
+      <div className="flex flex-wrap gap-4">
+        {statCards.map(({ key, ...card }) => (
+          <OrderStatCard key={key} {...card} />
         ))}
       </div>
 
       <OrdersToolbar query={query} onQueryChange={setQuery} />
 
+<<<<<<< HEAD
       {error && <p className="orders-page__error">{error}</p>}
       {isLoading ? <p className="orders-page__loading">Loading orders…</p> : <OrdersTable orders={filteredOrders} query={query} onViewOrder={setSelectedOrder} />}
       {selectedOrder && <OrderDetails order={selectedOrder} onClose={() => setSelectedOrder(null)} />}
+=======
+      {error && <p className="m-0 rounded-lg bg-[#fef3f2] p-4 text-danger">{error}</p>}
+      {isLoading ? <p className="m-0 rounded-lg bg-surface p-4 text-[#4b5563]">Loading orders…</p> : <OrdersTable orders={filteredOrders} query={query} onViewOrder={setSelectedOrder} />}
+      {selectedOrder && <OrderDetails order={selectedOrder} onClose={() => setSelectedOrder(null)} onUpdateStatus={handleUpdateStatus} />}
+>>>>>>> 78e1cc33d0dad5fb46c601957e814d18b2277c7a
     </div>
   );
 }

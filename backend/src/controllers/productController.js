@@ -29,6 +29,7 @@ const toApiProduct = (product) => ({
   images: { cover: product.cover_image, additional: product.additional_images ?? [] },
   inventory: { sku: product.sku, stockQuantity: product.stock_quantity, lowStockAlert: product.low_stock_alert },
   stockStatus: product.stock_status,
+  isActive: product.is_active,
   usage: { howToUse: product.how_to_use, careInstruction: product.care_instruction },
   createdAt: product.created_at,
   updatedAt: product.updated_at,
@@ -152,7 +153,24 @@ export const updateProduct = async (req, res, next) => {
     return res.json({ success: true, data: toApiProduct(data) });
   } catch (error) { return next(error); }
 };
-
+export const updateProductStatus = async (req, res, next) => {
+  try {
+    const { isActive } = req.body;
+    if (typeof isActive !== "boolean") {
+      return res.status(400).json({ success: false, message: "isActive must be a boolean" });
+    }
+    const { data, error } = await supabase
+      .from(table)
+      .update({ is_active: isActive })
+      .eq("id", req.params.id)
+      .eq("seller_id", req.seller.id)
+      .select()
+      .single();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ success: false, message: "Product not found" });
+    return res.json({ success: true, data: toApiProduct(data) });
+  } catch (error) { return next(error); }
+};
 export const deleteProduct = async (req, res, next) => {
   try {
     const { data, error } = await supabase.from(table).delete().eq("id", req.params.id).eq("seller_id", req.seller.id).select("cover_image, additional_images").maybeSingle();

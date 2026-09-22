@@ -63,4 +63,7 @@ export const updateProduct = (id, formData) =>
 export const deleteProduct = (id) =>
   api.delete(`/products/${id}`).then((res) => res.data);
 
+export const updateProductStatus = (id, isActive) =>
+  api.patch(`/products/${id}/status`, { isActive }).then((res) => res.data);
+
 export default api;

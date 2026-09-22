@@ -1,10 +1,10 @@
 import { IndianRupee, Package, ShoppingBag, Star } from "lucide-react";
 
 export const ORDER_STAT_CARDS = [
-  { key: "new", label: "New Order", value: 20, delta: "+12", icon: ShoppingBag, iconClass: "order-stat-card__icon--amber" },
-  { key: "shipped", label: "Shipped", value: 10, delta: "+12", icon: IndianRupee, iconClass: "order-stat-card__icon--green" },
-  { key: "delivered", label: "Delivered", value: 20, delta: "+12", icon: Package, iconClass: "order-stat-card__icon--green" },
-  { key: "returned", label: "Returned", value: 4, delta: "+12", icon: Star, iconClass: "order-stat-card__icon--amber" },
+  { key: "new", label: "New Order", value: 20, delta: "+12", icon: ShoppingBag, iconClass: "bg-[#fef3c7] text-[#d97706]" },
+  { key: "shipped", label: "Shipped", value: 10, delta: "+12", icon: IndianRupee, iconClass: "bg-[#d1fae5] text-[#059669]" },
+  { key: "delivered", label: "Delivered", value: 20, delta: "+12", icon: Package, iconClass: "bg-[#d1fae5] text-[#059669]" },
+  { key: "returned", label: "Returned", value: 4, delta: "+12", icon: Star, iconClass: "bg-[#fef3c7] text-[#d97706]" },
 ];
 
 export const MOCK_ORDERS = [
