@@ -1,8 +1,46 @@
+// src/components/products/Addproduct.jsx
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Plus, Upload } from "lucide-react";
 import { createProduct, getProductById, getProductCategories, updateProduct } from "../../api/productapi";
-import "../../styles/addproduct.css";
+import { FORM_ERROR_BANNER } from "../../constants/ui";
+
+/* ---------- Tailwind class constants ---------- */
+const PAGE = "max-w-[1100px]";
+const BACK_LINK =
+  "sticky top-[68px] z-10 mb-5 flex w-full cursor-pointer items-center gap-2 border-b border-[#ececec] bg-[#fafafa] py-4 text-[20px] font-bold shadow-[0_8px_14px_-18px_rgba(0,0,0,0.45)]";
+const FORM = "pb-[88px]";
+
+const CARD = "mb-5 rounded-xl border border-[#eee] bg-white p-6";
+const CARD_TITLE = "mb-4 text-[16px]";
+const SUB_HEADING = "mt-2 mb-3 text-[14px] text-[#444]";
+const GRID_2 = "mb-4 grid grid-cols-[1fr_1fr] gap-5";
+const GRID_3 = "mb-4 grid grid-cols-[repeat(3,1fr)] gap-5";
+
+const FIELD = "mb-1 flex flex-col gap-1.5";
+const FIELD_LABEL = "text-[13px] font-semibold text-[#333]";
+const REQUIRED = "text-[#d9534f]";
+const INPUT =
+  "rounded-lg border border-[#ddd] bg-white px-3 py-2.5 text-[14px] outline-none focus:border-[#4f9d5d]";
+const WEIGHT_INPUT = `${INPUT} min-w-0 flex-1`;
+const WEIGHT_SELECT = `${INPUT} w-[84px] flex-none`;
+const HINT = "text-[11px] text-[#999]";
+const FIELD_ERROR = "text-[11px] text-[#d9534f]";
+
+const IMAGE_ROW = "flex gap-10";
+const IMAGE_LABEL = "mb-2 block text-[13px] font-semibold";
+const IMAGE_LABEL_NOTE = "text-[11px] font-normal text-[#888]";
+const COVER_UPLOAD =
+  "flex h-[210px] w-[210px] cursor-pointer flex-col items-center justify-center gap-1 overflow-hidden rounded-[10px] border border-dashed border-[#ccc] text-[12px] text-[#888]";
+const ADDITIONAL_ROW = "flex gap-3";
+const ADDITIONAL_UPLOAD =
+  "flex h-[105px] w-[105px] cursor-pointer items-center justify-center overflow-hidden rounded-[10px] border border-dashed border-[#ccc] text-[#999]";
+const PREVIEW_IMG = "h-full w-full object-cover";
+const IMAGE_ERROR = `mt-2.5 block ${FIELD_ERROR}`;
+
+const SUBMIT_ROW = "fixed right-8 bottom-6 z-[12] max-[640px]:right-[18px] max-[640px]:bottom-[18px]";
+const SUBMIT_BTN =
+  "cursor-pointer rounded-lg border-0 bg-[#2f7a3c] px-9 py-3.5 text-[16px] font-semibold text-white shadow-[0_8px_20px_rgba(25,82,37,0.22)] hover:bg-[#256330] disabled:cursor-not-allowed disabled:opacity-60";
 
 const initialState = {
   productName: "",
@@ -152,39 +190,39 @@ export default function AddProduct() {
   };
 
   return (
-    <div className="add-product-page">
-      <button className="back-link" onClick={() => navigate(-1)} type="button">
+    <div className={PAGE}>
+      <button className={BACK_LINK} onClick={() => navigate(-1)} type="button">
         <ArrowLeft size={18} /> {isEditing ? "Edit Product" : "Add Product"}
       </button>
 
-      <form onSubmit={handleSubmit}>
-        {serverError && <div className="form-error-banner">{serverError}</div>}
+      <form className={FORM} onSubmit={handleSubmit}>
+        {serverError && <div className={`${FORM_ERROR_BANNER} mb-4`}>{serverError}</div>}
 
-        <section className="form-card">
-          <h3>Basic Information</h3>
-          <div className="grid-3">
+        <section className={CARD}>
+          <h3 className={CARD_TITLE}>Basic Information</h3>
+          <div className={GRID_3}>
             <Field label="Product Name" required error={errors.productName}>
-              <input name="productName" value={form.productName} onChange={handleChange} placeholder="Enter Full Name" />
+              <input className={INPUT} name="productName" value={form.productName} onChange={handleChange} placeholder="Enter Full Name" />
             </Field>
             <Field label="Category" required error={errors.category}>
-              <select name="category" value={form.category} onChange={handleChange}>
+              <select className={INPUT} name="category" value={form.category} onChange={handleChange}>
                 <option value="">Select a category</option>
                 {categories.map((category) => <option key={category} value={category}>{category}</option>)}
               </select>
             </Field>
             <Field label="Sub Category" required error={errors.subCategory}>
-              <input name="subCategory" value={form.subCategory} onChange={handleChange} placeholder="Enter Full Name" />
+              <input className={INPUT} name="subCategory" value={form.subCategory} onChange={handleChange} placeholder="Enter Full Name" />
             </Field>
           </div>
 
-          <div className="grid-2">
+          <div className={GRID_2}>
             <Field label="Material" required error={errors.material}>
-              <input name="material" value={form.material} onChange={handleChange} placeholder="Enter Full Name" />
+              <input className={INPUT} name="material" value={form.material} onChange={handleChange} placeholder="Enter Full Name" />
             </Field>
             <Field label="Quantity" required error={errors.weight}>
-              <div className="weight-input-group">
-                <input name="weight" type="number" min="0" step="any" value={form.weight} onChange={handleChange} placeholder="Enter quantity" />
-                <select name="weightUnit" value={form.weightUnit} onChange={handleChange} aria-label="Weight unit">
+              <div className="flex gap-2">
+                <input className={WEIGHT_INPUT} name="weight" type="number" min="0" step="any" value={form.weight} onChange={handleChange} placeholder="Enter quantity" />
+                <select className={WEIGHT_SELECT} name="weightUnit" value={form.weightUnit} onChange={handleChange} aria-label="Weight unit">
                   <option value="kg">kg</option>
                   <option value="g">g</option>
                   <option value="l">l</option>
@@ -199,6 +237,7 @@ export default function AddProduct() {
 
           <Field label="Product Description">
             <textarea
+              className={INPUT}
               name="description"
               value={form.description}
               onChange={handleChange}
@@ -209,6 +248,7 @@ export default function AddProduct() {
 
           <Field label="Product Benefits">
             <textarea
+              className={INPUT}
               name="benefits"
               value={form.benefits}
               onChange={handleChange}
@@ -219,6 +259,7 @@ export default function AddProduct() {
 
           <Field label="Product Highlights">
             <textarea
+              className={INPUT}
               name="highlights"
               value={form.highlights}
               onChange={handleChange}
@@ -227,49 +268,49 @@ export default function AddProduct() {
             />
           </Field>
 
-          <h4 className="sub-heading">Dimensions (Optional)</h4>
-          <div className="grid-3">
+          <h4 className={SUB_HEADING}>Dimensions (Optional)</h4>
+          <div className={GRID_3}>
             <Field label="Length">
-              <input name="length" value={form.length} onChange={handleChange} placeholder="Enter Full Name" />
+              <input className={INPUT} name="length" value={form.length} onChange={handleChange} placeholder="Enter Full Name" />
             </Field>
             <Field label="Width">
-              <input name="width" value={form.width} onChange={handleChange} placeholder="Enter Full Name" />
+              <input className={INPUT} name="width" value={form.width} onChange={handleChange} placeholder="Enter Full Name" />
             </Field>
             <Field label="Height">
-              <input name="height" value={form.height} onChange={handleChange} placeholder="Enter Full Name" />
+              <input className={INPUT} name="height" value={form.height} onChange={handleChange} placeholder="Enter Full Name" />
             </Field>
           </div>
         </section>
 
-        <section className="form-card">
-          <h3>Pricing</h3>
-          <div className="grid-3">
+        <section className={CARD}>
+          <h3 className={CARD_TITLE}>Pricing</h3>
+          <div className={GRID_3}>
             <Field label="MRP" required error={errors.mrp}>
-              <input name="mrp" type="number" min="0.01" step="0.01" value={form.mrp} onChange={handleChange} placeholder="₹ Enter the Price" />
+              <input className={INPUT} name="mrp" type="number" min="0.01" step="0.01" value={form.mrp} onChange={handleChange} placeholder="₹ Enter the Price" />
             </Field>
             <Field label="Discount / Offer Price" error={errors.discountPrice}>
-              <input name="discountPrice" type="number" min="0.01" step="0.01" value={form.discountPrice} onChange={handleChange} placeholder="₹ Enter the Price" />
+              <input className={INPUT} name="discountPrice" type="number" min="0.01" step="0.01" value={form.discountPrice} onChange={handleChange} placeholder="₹ Enter the Price" />
             </Field>
             <Field label="Selling Price" required error={errors.sellingPrice}>
-              <input name="sellingPrice" type="number" min="0.01" step="0.01" value={form.sellingPrice} onChange={handleChange} placeholder="₹ Enter the Price" />
+              <input className={INPUT} name="sellingPrice" type="number" min="0.01" step="0.01" value={form.sellingPrice} onChange={handleChange} placeholder="₹ Enter the Price" />
             </Field>
           </div>
         </section>
 
-        <section className="form-card">
-          <h3>Product Image</h3>
-          <div className="image-row">
+        <section className={CARD}>
+          <h3 className={CARD_TITLE}>Product Image</h3>
+          <div className={IMAGE_ROW}>
             <div>
-              <span className="field-label">Cover Image</span>
-              <label className="cover-upload">
+              <span className={IMAGE_LABEL}>Cover Image</span>
+              <label className={COVER_UPLOAD}>
                 {coverPreview ? (
-                  <img src={coverPreview} alt="cover preview" />
+                  <img className={PREVIEW_IMG} src={coverPreview} alt="cover preview" />
                 ) : (
                   <>
                     <Upload size={20} />
                     <span>Upload Cover Image</span>
-                    <span className="hint">PNG,JPG</span>
-                    <span className="hint">(Max 2MB)</span>
+                    <span>PNG,JPG</span>
+                    <span>(Max 2MB)</span>
                   </>
                 )}
                 <input type="file" accept="image/png,image/jpeg" hidden onChange={handleCoverChange} />
@@ -277,12 +318,12 @@ export default function AddProduct() {
             </div>
 
             <div>
-              <span className="field-label">Additional Image <small>(minimum 3 total images)</small></span>
-              <div className="additional-row">
+              <span className={IMAGE_LABEL}>Additional Image <small className={IMAGE_LABEL_NOTE}>(minimum 3 total images)</small></span>
+              <div className={ADDITIONAL_ROW}>
                 {additionalPreviews.map((preview, idx) => (
-                  <label className="additional-upload" key={idx}>
+                  <label className={ADDITIONAL_UPLOAD} key={idx}>
                     {preview ? (
-                      <img src={preview} alt={`additional ${idx + 1}`} />
+                      <img className={PREVIEW_IMG} src={preview} alt={`additional ${idx + 1}`} />
                     ) : (
                       <Plus size={22} />
                     )}
@@ -297,40 +338,40 @@ export default function AddProduct() {
               </div>
             </div>
           </div>
-          {errors.images && <span className="field-error image-error">{errors.images}</span>}
+          {errors.images && <span className={IMAGE_ERROR}>{errors.images}</span>}
         </section>
 
-        <section className="form-card">
-          <h3>Inventory</h3>
-          <div className="grid-3">
+        <section className={CARD}>
+          <h3 className={CARD_TITLE}>Inventory</h3>
+          <div className={GRID_3}>
             <Field label="SKU">
-              <input name="sku" value={form.sku} onChange={handleChange} placeholder="Optional SKU" />
-              <span className="hint">Stock Keeping Unit</span>
+              <input className={INPUT} name="sku" value={form.sku} onChange={handleChange} placeholder="Optional SKU" />
+              <span className={HINT}>Stock Keeping Unit</span>
             </Field>
             <Field label="Stock Quantity" required error={errors.stockQuantity}>
-              <input name="stockQuantity" type="number" min="0" step="1" value={form.stockQuantity} onChange={handleChange} placeholder="Enter quantity" />
+              <input className={INPUT} name="stockQuantity" type="number" min="0" step="1" value={form.stockQuantity} onChange={handleChange} placeholder="Enter quantity" />
             </Field>
             <Field label="Low Stock Alert" required error={errors.lowStockAlert}>
-              <input name="lowStockAlert" type="number" min="0" step="1" value={form.lowStockAlert} onChange={handleChange} placeholder="Enter quantity" />
-              <span className="hint">You will be notified when stock reaches this level</span>
+              <input className={INPUT} name="lowStockAlert" type="number" min="0" step="1" value={form.lowStockAlert} onChange={handleChange} placeholder="Enter quantity" />
+              <span className={HINT}>You will be notified when stock reaches this level</span>
             </Field>
           </div>
         </section>
 
-        <section className="form-card">
-          <h3>Usage &amp; Care</h3>
-          <div className="grid-2">
+        <section className={CARD}>
+          <h3 className={CARD_TITLE}>Usage &amp; Care</h3>
+          <div className={GRID_2}>
             <Field label="How To Use">
-              <input name="howToUse" value={form.howToUse} onChange={handleChange} placeholder="Explain How to use your product" />
+              <input className={INPUT} name="howToUse" value={form.howToUse} onChange={handleChange} placeholder="Explain How to use your product" />
             </Field>
             <Field label="Care Instruction">
-              <input name="careInstruction" value={form.careInstruction} onChange={handleChange} placeholder="Provide care and maintenance instructions" />
+              <input className={INPUT} name="careInstruction" value={form.careInstruction} onChange={handleChange} placeholder="Provide care and maintenance instructions" />
             </Field>
           </div>
         </section>
 
-        <div className="submit-row">
-          <button type="submit" className="submit-btn" disabled={submitting}>
+        <div className={SUBMIT_ROW}>
+          <button type="submit" className={SUBMIT_BTN} disabled={submitting}>
             {submitting ? "Saving..." : isEditing ? "Update Product" : "Submit"}
           </button>
         </div>
@@ -341,12 +382,12 @@ export default function AddProduct() {
 
 function Field({ label, required, error, children }) {
   return (
-    <div className="field">
-      <label>
-        {label} {required && <span className="required">*</span>}
+    <div className={FIELD}>
+      <label className={FIELD_LABEL}>
+        {label} {required && <span className={REQUIRED}>*</span>}
       </label>
       {children}
-      {error && <span className="field-error">{error}</span>}
+      {error && <span className={FIELD_ERROR}>{error}</span>}
     </div>
   );
 }

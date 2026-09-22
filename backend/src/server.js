@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import productRoutes from "./routes/productroutes.js";
 import authRoutes from "./routes/authRoutes.js";
+import orderRoutes from "./routes/orderRoutes.js";
 
 const app = express();
 const allowedOrigins = (process.env.CLIENT_ORIGIN || process.env.CLIENT_URL || "http://localhost:5173").split(",");
@@ -12,6 +13,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
+app.use("/api/orders", orderRoutes);
 app.get("/", (_req, res) => res.send("Veda Crafts API is running"));
 
 app.use((error, _req, res, _next) => {

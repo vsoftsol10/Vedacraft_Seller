@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createProduct, deleteProduct, getProductById, getProductCategories, getProducts, getProductStats, updateProduct } from "../controllers/productController.js";
+import { createProduct, deleteProduct, getProductById, getProductCategories, getProducts, getProductStats, updateProduct,updateProductStatus } from "../controllers/productController.js";
 import { productImageUpload } from "../middlewares/upload.js";
 import { requireSeller } from "../middlewares/sellerAuth.js";
 
@@ -13,5 +13,5 @@ router.get("/:id", getProductById);
 router.post("/", productImageUpload, createProduct);
 router.put("/:id", productImageUpload, updateProduct);
 router.delete("/:id", deleteProduct);
-
+router.patch("/:id/status", updateProductStatus);
 export default router;

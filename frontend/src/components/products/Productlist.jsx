@@ -1,15 +1,69 @@
-import { useEffect, useState, useRef } from "react";
+// src/components/products/Productlist.jsx
+import { useCallback, useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Plus, Package, IndianRupee, Box, Star, MoreVertical, Eye, Pencil, Trash2, Check, ChevronDown, X } from "lucide-react";
+import { Search, Plus, Package, IndianRupee, Box, Star, MoreVertical, Eye, Pencil, Trash2, Check, X } from "lucide-react";
 import { deleteProduct, getProductCategories, getProducts, getProductStats } from "../../api/productapi";
 import ProductDetails from "./ProductDetails";
-import "../../styles/productlist.css";
+import { FORM_ERROR_BANNER } from "../../constants/ui";
 
-const statusClass = {
-  "In Stock": "status-in-stock",
-  "Out of Stock": "status-out-of-stock",
-  "Low Stock": "status-low-stock",
+/* ---------- Tailwind class constants ---------- */
+const PAGE_HEADER = "mb-5 flex items-start justify-between";
+const PAGE_TITLE = "mb-1 text-[28px] font-bold";
+const PAGE_SUBTITLE = "text-[14px] text-[#777]";
+const ADD_BTN =
+  "flex cursor-pointer items-center gap-1.5 rounded-lg border-0 bg-[#f2a93b] px-[18px] py-3 font-semibold text-white hover:bg-[#e2992b]";
+
+const STATS_ROW = "mb-5 grid grid-cols-[repeat(4,1fr)] gap-4";
+const STAT_CARD = "flex items-start gap-3 rounded-xl border border-[#eee] bg-white p-4";
+const STAT_ICON = "flex h-9 w-9 items-center justify-center rounded-lg";
+const STAT_LABEL = "text-[13px] text-[#666]";
+const STAT_VALUE = "mt-1.5 mb-1 text-[22px] font-bold";
+
+const TOOLBAR = "mb-3 flex justify-between gap-3";
+const SEARCH_BOX = "flex flex-1 items-center gap-2 rounded-lg border border-[#e5e5e5] bg-white px-3.5 py-2.5";
+const SEARCH_INPUT = "flex-1 border-0 text-[14px] outline-none";
+const TOOLBAR_ACTIONS = "flex gap-2.5";
+const GHOST_BTN =
+  "flex min-w-[86px] cursor-pointer items-center justify-center gap-[5px] rounded-lg border px-4 py-2.5 text-[14px]";
+const GHOST_IDLE = "border-[#e5e5e5] bg-white";
+const GHOST_ACTIVE = "border-[#e5a13b] bg-[#fff8eb] text-[#9b5d08]";
+
+const TOOLBAR_MENU =
+  "absolute top-[calc(100%+7px)] right-0 z-10 max-h-[260px] min-w-[180px] overflow-y-auto rounded-[10px] border border-[#e8e8e8] bg-white p-1.5 shadow-[0_10px_28px_rgba(0,0,0,0.12)]";
+const TOOLBAR_MENU_TITLE = "mx-2 mt-[5px] mb-1.5 text-[12px] font-semibold text-[#777]";
+const MENU_ITEM =
+  "flex w-full cursor-pointer items-center gap-2 rounded-md border-0 px-2 py-[9px] text-left text-[13px]";
+const MENU_ITEM_IDLE = "bg-transparent text-[#333] hover:bg-[#f3f8f3] hover:text-[#277437]";
+const MENU_ITEM_SELECTED = "bg-[#f3f8f3] text-[#277437]";
+
+const APPLIED_FILTERS = "-mt-[3px] mb-3 flex flex-wrap items-center gap-2 text-[13px] text-[#666]";
+const FILTER_CHIP =
+  "inline-flex cursor-pointer items-center gap-[5px] rounded-full border border-[#d7ead9] bg-[#f2f9f3] px-[9px] py-[5px] text-[13px] text-[#287338] hover:bg-[#e4f3e6]";
+const CLEAR_FILTERS =
+  "cursor-pointer border-0 bg-transparent px-0.5 py-[5px] text-[13px] font-semibold text-[#b76b04] hover:underline";
+
+const TABLE_CARD = "rounded-xl border border-[#eee] bg-white";
+const TABLE = "w-full border-collapse";
+const TH = "border-b border-[#eee] px-4 py-3.5 text-left text-[13px] text-[#555]";
+const TD_COMMON = "border-b border-[#f5f5f5] text-[14px]";
+const TD = `${TD_COMMON} px-4 py-3.5`;
+const TD_EMPTY = `${TD_COMMON} p-8 text-center text-[#999]`;
+
+const STATUS_DOT_BASE = "mr-1.5 inline-block h-2.5 w-2 rounded-[50%]";
+const STATUS_DOT = {
+  "In Stock": "bg-[#4f9d5d]",
+  "Out of Stock": "bg-[#d9534f]",
+  "Low Stock": "bg-[#f2a93b]",
 };
+
+// "action-cell" is also a JS hook: the outside-click handler uses closest(".action-cell").
+const ACTION_CELL = "action-cell relative w-[52px] border-b border-[#f5f5f5] px-4 py-3.5 text-[14px]";
+const ACTION_TRIGGER =
+  "grid cursor-pointer place-items-center rounded-md border-0 bg-transparent p-1.5 text-[#555] hover:bg-[#f1f5f1]";
+const ACTION_MENU =
+  "absolute right-3 bottom-[42px] z-[5] w-[130px] rounded-lg border border-[#e6e6e6] bg-white p-[5px] shadow-[0_8px_22px_rgba(0,0,0,0.14)]";
+const ACTION_ITEM =
+  "flex w-full cursor-pointer items-center gap-2 rounded-md border-0 bg-transparent p-[9px] text-left text-[13px] hover:bg-[#f6f7f6]";
 
 export default function ProductsList() {
   const navigate = useNavigate();
@@ -26,7 +80,7 @@ export default function ProductsList() {
   const [viewProduct, setViewProduct] = useState(null);
   const [actionError, setActionError] = useState("");
 
-  const loadData = async (filters = {}) => {
+  const loadData = useCallback(async (filters = {}) => {
     setLoading(true);
     try {
       const params = {
@@ -46,13 +100,18 @@ export default function ProductsList() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [category, search, stockStatus]);
 
   useEffect(() => {
-    loadData();
-    getProductCategories()
-      .then(({ data }) => setCategories(data))
-      .catch((err) => console.error(err));
+    let cancelled = false;
+    const loadInitialData = async () => {
+      try {
+        const [productsRes, statsRes, categoriesRes] = await Promise.all([getProducts({ search: "", category: "", stockStatus: "", limit: 100 }), getProductStats(), getProductCategories()]);
+        if (!cancelled) { setProducts(productsRes.data); setStats(statsRes.data); setCategories(categoriesRes.data); }
+      } catch (err) { console.error(err); } finally { if (!cancelled) setLoading(false); }
+    };
+    loadInitialData();
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -121,101 +180,138 @@ export default function ProductsList() {
   };
 
   return (
-    <div className="products-page">
-      <div className="page-header">
+    <div>
+      <div className={PAGE_HEADER}>
         <div>
-          <h1>Products</h1>
-          <p>Manage your products, inventory and pricing all in one place</p>
+          <h1 className={PAGE_TITLE}>Products</h1>
+          <p className={PAGE_SUBTITLE}>Manage your products, inventory and pricing all in one place</p>
         </div>
-        <button className="add-product-btn" onClick={() => navigate("/products/add")}>
+        <button className={ADD_BTN} onClick={() => navigate("/products/add")}>
           <Plus size={18} /> Add Product
         </button>
       </div>
 
-      <div className="stats-row">
+      <div className={STATS_ROW}>
         <StatCard icon={<Package size={20} />} label="Total Products" value={stats.totalProducts} iconBg="#fdeacb" />
         <StatCard icon={<IndianRupee size={20} />} label="In Stock" value={stats.inStock} iconBg="#d9f2df" />
         <StatCard icon={<Box size={20} />} label="Out of Stock" value={stats.outOfStock} iconBg="#d9f2df" />
         <StatCard icon={<Star size={20} />} label="Low Stock" value={stats.lowStock} iconBg="#fdeacb" />
       </div>
 
-      <div className="table-toolbar">
-        <form className="search-box" onSubmit={handleSearch}>
+      <div className={TOOLBAR}>
+        <form className={SEARCH_BOX} onSubmit={handleSearch}>
           <Search size={18} />
           <input
+            className={SEARCH_INPUT}
             placeholder="Search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </form>
-        <div className="toolbar-actions" ref={toolbarRef}>
-          <div className="toolbar-menu-wrap">
-            <button type="button" className={`ghost-btn menu-trigger ${category ? "is-active" : ""}`} onClick={() => setOpenMenu(openMenu === "category" ? null : "category")} aria-expanded={openMenu === "category"}>
+        <div className={TOOLBAR_ACTIONS} ref={toolbarRef}>
+          <div className="relative">
+            <button
+              type="button"
+              className={`${GHOST_BTN} ${category ? GHOST_ACTIVE : GHOST_IDLE}`}
+              onClick={() => setOpenMenu(openMenu === "category" ? null : "category")}
+              aria-expanded={openMenu === "category"}
+            >
               {category || "Filter"}
             </button>
-            {openMenu === "category" && <div className="toolbar-menu" role="menu" aria-label="Filter by category">
-              <p className="toolbar-menu-title">Category</p>
-              <button type="button" className={!category ? "selected" : ""} onClick={() => handleCategoryChange("")}><Check size={15} /> All categories</button>
-              {categories.map((item) => <button type="button" key={item} className={category === item ? "selected" : ""} onClick={() => handleCategoryChange(item)}><Check size={15} /> {item}</button>)}
-            </div>}
+            {openMenu === "category" && (
+              <div className={TOOLBAR_MENU} role="menu" aria-label="Filter by category">
+                <p className={TOOLBAR_MENU_TITLE}>Category</p>
+                <MenuOption selected={!category} onClick={() => handleCategoryChange("")}>
+                  All categories
+                </MenuOption>
+                {categories.map((item) => (
+                  <MenuOption key={item} selected={category === item} onClick={() => handleCategoryChange(item)}>
+                    {item}
+                  </MenuOption>
+                ))}
+              </div>
+            )}
           </div>
-          <div className="toolbar-menu-wrap">
-            <button type="button" className={`ghost-btn menu-trigger ${stockStatus ? "is-active" : ""}`} onClick={() => setOpenMenu(openMenu === "stock" ? null : "stock")} aria-expanded={openMenu === "stock"}>
+          <div className="relative">
+            <button
+              type="button"
+              className={`${GHOST_BTN} ${stockStatus ? GHOST_ACTIVE : GHOST_IDLE}`}
+              onClick={() => setOpenMenu(openMenu === "stock" ? null : "stock")}
+              aria-expanded={openMenu === "stock"}
+            >
               {stockStatus || "Sort by"}
             </button>
-            {openMenu === "stock" && <div className="toolbar-menu" role="menu" aria-label="Filter by stock status">
-              <p className="toolbar-menu-title">Stock status</p>
-              {["", "In Stock", "Out of Stock", "Low Stock"].map((item) => <button type="button" key={item || "all"} className={stockStatus === item ? "selected" : ""} onClick={() => handleStockStatusChange(item)}><Check size={15} /> {item || "All products"}</button>)}
-            </div>}
+            {openMenu === "stock" && (
+              <div className={TOOLBAR_MENU} role="menu" aria-label="Filter by stock status">
+                <p className={TOOLBAR_MENU_TITLE}>Stock status</p>
+                {["", "In Stock", "Out of Stock", "Low Stock"].map((item) => (
+                  <MenuOption key={item || "all"} selected={stockStatus === item} onClick={() => handleStockStatusChange(item)}>
+                    {item || "All products"}
+                  </MenuOption>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
-      {(category || stockStatus) && <div className="applied-filters" aria-label="Applied filters">
-        <span>Applied filters:</span>
-        {category && <button type="button" className="filter-chip" onClick={() => handleCategoryChange("")}>Category: {category} <X size={14} /></button>}
-        {stockStatus && <button type="button" className="filter-chip" onClick={() => handleStockStatusChange("")}>Stock: {stockStatus} <X size={14} /></button>}
-        <button type="button" className="clear-filters" onClick={clearFilters}>Clear all</button>
-      </div>}
-      {actionError && <div className="form-error-banner">{actionError}</div>}
+      {(category || stockStatus) && (
+        <div className={APPLIED_FILTERS} aria-label="Applied filters">
+          <span>Applied filters:</span>
+          {category && (
+            <button type="button" className={FILTER_CHIP} onClick={() => handleCategoryChange("")}>
+              Category: {category} <X size={14} />
+            </button>
+          )}
+          {stockStatus && (
+            <button type="button" className={FILTER_CHIP} onClick={() => handleStockStatusChange("")}>
+              Stock: {stockStatus} <X size={14} />
+            </button>
+          )}
+          <button type="button" className={CLEAR_FILTERS} onClick={clearFilters}>Clear all</button>
+        </div>
+      )}
+      {actionError && <div className={`${FORM_ERROR_BANNER} mb-4`}>{actionError}</div>}
 
-      <div className="table-card">
-        <table>
+      <div className={TABLE_CARD}>
+        <table className={TABLE}>
           <thead>
             <tr>
-              <th>Product ID</th>
-              <th>Product Name</th>
-              <th>Category</th>
-              <th>Price</th>
-              <th>Stock</th>
-              <th>Date</th>
-              <th>Action</th>
+              <th className={TH}>Product ID</th>
+              <th className={TH}>Product Name</th>
+              <th className={TH}>Category</th>
+              <th className={TH}>Price</th>
+              <th className={TH}>Stock</th>
+              <th className={TH}>Date</th>
+              <th className={TH}>Action</th>
             </tr>
           </thead>
           <tbody>
             {loading && (
-              <tr><td colSpan={7} className="empty-row">Loading...</td></tr>
+              <tr><td colSpan={7} className={TD_EMPTY}>Loading...</td></tr>
             )}
             {!loading && products.length === 0 && (
-              <tr><td colSpan={7} className="empty-row">No products found</td></tr>
+              <tr><td colSpan={7} className={TD_EMPTY}>No products found</td></tr>
             )}
             {!loading && products.map((p) => (
               <tr key={p._id}>
-                <td>{p.productId}</td>
-                <td>{p.productName}</td>
-                <td>{p.category}</td>
-                <td>₹{Number(p.pricing?.sellingPrice ?? 0).toLocaleString("en-IN")}</td>
-                <td>
-                  <span className={`status-dot ${statusClass[p.stockStatus]}`} />
+                <td className={TD}>{p.productId}</td>
+                <td className={TD}>{p.productName}</td>
+                <td className={TD}>{p.category}</td>
+                <td className={TD}>₹{Number(p.pricing?.sellingPrice ?? 0).toLocaleString("en-IN")}</td>
+                <td className={TD}>
+                  <span className={`${STATUS_DOT_BASE} ${STATUS_DOT[p.stockStatus] ?? ""}`} />
                   {p.stockStatus}
                 </td>
-                <td>{formatDate(p.createdAt)}</td>
-                <td className="action-cell">
-                  <button className="action-trigger" onClick={() => setMenuId(menuId === p._id ? null : p._id)} aria-label={`Actions for ${p.productName}`}><MoreVertical size={18} /></button>
-                  {menuId === p._id && <div className="product-action-menu">
-                    <button onClick={() => { setViewProduct(p); setMenuId(null); }}><Eye size={16} /> View</button>
-                    <button onClick={() => navigate(`/products/${p._id}/edit`)}><Pencil size={16} /> Edit</button>
-                    <button className="delete-action" onClick={() => handleDelete(p)}><Trash2 size={16} /> Delete</button>
-                  </div>}
+                <td className={TD}>{formatDate(p.createdAt)}</td>
+                <td className={ACTION_CELL}>
+                  <button className={ACTION_TRIGGER} onClick={() => setMenuId(menuId === p._id ? null : p._id)} aria-label={`Actions for ${p.productName}`}><MoreVertical size={18} /></button>
+                  {menuId === p._id && (
+                    <div className={ACTION_MENU}>
+                      <button className={ACTION_ITEM} onClick={() => { setViewProduct(p); setMenuId(null); }}><Eye size={16} /> View</button>
+                      <button className={ACTION_ITEM} onClick={() => navigate(`/products/${p._id}/edit`)}><Pencil size={16} /> Edit</button>
+                      <button className={`${ACTION_ITEM} text-[#c93636]`} onClick={() => handleDelete(p)}><Trash2 size={16} /> Delete</button>
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}
@@ -227,14 +323,26 @@ export default function ProductsList() {
   );
 }
 
+function MenuOption({ selected, onClick, children }) {
+  return (
+    <button
+      type="button"
+      className={`${MENU_ITEM} ${selected ? MENU_ITEM_SELECTED : MENU_ITEM_IDLE}`}
+      onClick={onClick}
+    >
+      <Check size={15} className={`text-[#277437] ${selected ? "visible" : "invisible"}`} />
+      {children}
+    </button>
+  );
+}
+
 function StatCard({ icon, label, value, iconBg }) {
   return (
-    <div className="stat-card">
-      <div className="stat-icon" style={{ background: iconBg }}>{icon}</div>
+    <div className={STAT_CARD}>
+      <div className={STAT_ICON} style={{ background: iconBg }}>{icon}</div>
       <div>
-        <p className="stat-label">{label}</p>
-        <p className="stat-value">{value}</p>
-       
+        <p className={STAT_LABEL}>{label}</p>
+        <p className={STAT_VALUE}>{value}</p>
       </div>
     </div>
   );

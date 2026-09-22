@@ -37,3 +37,4 @@ model Product {
 
   @@map("seller_products")
 }
+
