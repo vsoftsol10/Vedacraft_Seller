@@ -153,13 +153,25 @@ function StatusDropdown({ value, onChange }) {
 
 export default function OrderDetails({ order, onClose, onUpdateStatus }) {
   const [status, setStatus] = useState(order.status);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const currentStep = STATUS_INDEX[status] ?? 0;
   const phone = order.phone ?? "Not available";
   const address = order.address ?? "Not available";
 
-  const handleSave = () => {
-    onUpdateStatus?.(order.id, status);
-    onClose();
+  const handleSave = async () => {
+    if (!onUpdateStatus || isSaving) return;
+
+    try {
+      setIsSaving(true);
+      setSaveError("");
+      await onUpdateStatus(order.rawId, status);
+      onClose();
+    } catch (requestError) {
+      setSaveError(requestError.response?.data?.message || "Unable to update order status.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -249,6 +261,7 @@ export default function OrderDetails({ order, onClose, onUpdateStatus }) {
               </li>
             ))}
           </ol>
+          {saveError && <p className="m-0 mt-3 rounded-md bg-[#fef3f2] p-3 text-sm text-danger">{saveError}</p>}
         </section>
 
         <footer className="flex justify-end gap-3 p-5">
@@ -263,8 +276,9 @@ export default function OrderDetails({ order, onClose, onUpdateStatus }) {
             type="button"
             className="min-w-[110px] cursor-pointer rounded border border-[#28912d] bg-[#28912d] px-5 py-2 text-sm font-bold text-white"
             onClick={handleSave}
+            disabled={isSaving}
           >
-            Save
+            {isSaving ? "Saving..." : "Save"}
           </button>
         </footer>
       </aside>

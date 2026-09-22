@@ -79,7 +79,14 @@ export const updateOrderStatus = async (req, res, next) => {
     const owned = orderItems(order.items).some((item) => productIds.has(item.id));
     if (!owned) return res.status(404).json({ success: false, message: "Order not found" });
 
-    const { data, error } = await supabase.from(ordersTable).update({ status }).eq("id", req.params.id).select().single();
+    const updates = { status };
+    // Record the first time the seller marks an order as delivered. Do not
+    // clear it on later status changes so the delivery date remains auditable.
+    if (status === "Delivered" && !order.delivered_at) {
+      updates.delivered_at = new Date().toISOString();
+    }
+
+    const { data, error } = await supabase.from(ordersTable).update(updates).eq("id", req.params.id).select().single();
     if (error) throw error;
     return res.json({ success: true, data });
   } catch (error) {
