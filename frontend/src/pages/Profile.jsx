@@ -190,6 +190,7 @@ export default function Profile() {
         removeImage,
       });
       applyProfile(data);
+      window.dispatchEvent(new Event('seller-profile-updated'));
       setBanner({ type: 'success', text: 'Profile saved' });
     } catch (err) {
       const { message, fieldErrors } = parseApiError(err);

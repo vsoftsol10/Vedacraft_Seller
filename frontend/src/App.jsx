@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BrowserRouter, Navigate, Routes, Route, NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutGrid,
@@ -19,8 +19,13 @@ import Dashboard from "./pages/Dashboard"
 import AddProduct from "./components/products/Addproduct";
 import Orders from "./pages/Order"
 import Login from "./pages/Login";
+import Reviews from "./pages/Reviews";
 import Profile from "./pages/Profile";
+import BusinessInformation from "./pages/BusinessInformation";
+import BankDetails from "./pages/BankDetails";
+import SellingLocation from "./pages/SellingLocation";
 import { clearSellerSession } from "./api/productapi";
+import { fetchProfile } from "./api/profileapi";
 
 const NAV_ITEM = "mb-1 flex items-center gap-[10px] rounded-lg px-3 py-2.5 text-sm text-[#444] no-underline hover:bg-[#f5f5f5]";
 const ACTIVE_NAV_ITEM = "bg-[#e4f4e2] font-semibold text-[#2f7a3c]";
@@ -48,6 +53,31 @@ export default function App() {
       </Routes>
     </BrowserRouter>
   );
+}
+
+function HeaderProfileImage() {
+  const [imageUrl, setImageUrl] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadProfileImage = async () => {
+      try {
+        const profile = await fetchProfile();
+        if (!cancelled) setImageUrl(profile?.profileImage ?? null);
+      } catch {
+        if (!cancelled) setImageUrl(null);
+      }
+    };
+    loadProfileImage();
+    window.addEventListener("seller-profile-updated", loadProfileImage);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("seller-profile-updated", loadProfileImage);
+    };
+  }, []);
+
+  if (!imageUrl) return <div className="h-9 w-9 rounded-full bg-[#ddd]" aria-label="Profile image" />;
+  return <img src={imageUrl} alt="Profile" className="h-9 w-9 rounded-full object-cover" onError={() => setImageUrl(null)} />;
 }
 
 function SellerPortal() {
@@ -84,9 +114,9 @@ function SellerPortal() {
                 </button>
                 {settingsOpen && <div className="mb-1.5 ml-[34px] grid -mt-px gap-0.5">
                   <NavLink to="/settings/profile" className={({ isActive }) => `rounded-md px-2.5 py-[7px] text-left text-xs text-[#666] no-underline hover:bg-[#f1f8f0] hover:font-semibold hover:text-[#2f7a3c]${isActive ? " bg-[#f1f8f0] font-semibold text-[#2f7a3c]" : ""}`}>Profile</NavLink>
-                  <button type="button" className="cursor-pointer rounded-md border-0 bg-transparent px-2.5 py-[7px] text-left font-[inherit] text-xs text-[#666] hover:bg-[#f1f8f0] hover:font-semibold hover:text-[#2f7a3c]">Business Information</button>
-                  <button type="button" className="cursor-pointer rounded-md border-0 bg-transparent px-2.5 py-[7px] text-left font-[inherit] text-xs text-[#666] hover:bg-[#f1f8f0] hover:font-semibold hover:text-[#2f7a3c]">Bank Details</button>
-                  <button type="button" className="cursor-pointer rounded-md border-0 bg-transparent px-2.5 py-[7px] text-left font-[inherit] text-xs text-[#666] hover:bg-[#f1f8f0] hover:font-semibold hover:text-[#2f7a3c]">Selling Location</button>
+                  <NavLink to="/settings/business-information" className={({ isActive }) => `rounded-md px-2.5 py-[7px] text-left text-xs text-[#666] no-underline hover:bg-[#f1f8f0] hover:font-semibold hover:text-[#2f7a3c]${isActive ? " bg-[#f1f8f0] font-semibold text-[#2f7a3c]" : ""}`}>Business Information</NavLink>
+                  <NavLink to="/settings/bank-details" className={({ isActive }) => `rounded-md px-2.5 py-[7px] text-left text-xs text-[#666] no-underline hover:bg-[#f1f8f0] hover:font-semibold hover:text-[#2f7a3c]${isActive ? " bg-[#f1f8f0] font-semibold text-[#2f7a3c]" : ""}`}>Bank Details</NavLink>
+                  <NavLink to="/settings/selling-location" className={({ isActive }) => `rounded-md px-2.5 py-[7px] text-left text-xs text-[#666] no-underline hover:bg-[#f1f8f0] hover:font-semibold hover:text-[#2f7a3c]${isActive ? " bg-[#f1f8f0] font-semibold text-[#2f7a3c]" : ""}`}>Selling Location</NavLink>
                 </div>}
               </div>
             ) : (
@@ -107,7 +137,7 @@ function SellerPortal() {
             </div>
             <div className="flex items-center gap-4">
               <Bell size={20} />
-              <div className="h-9 w-9 rounded-full bg-[#ddd]" />
+              <HeaderProfileImage />
             </div>
           </header>
 
@@ -118,7 +148,12 @@ function SellerPortal() {
             <Route path="/products/add" element={<AddProduct />} />
             <Route path="/products/:id/edit" element={<AddProduct />} />
             <Route path="/orders" element={<Orders />} />
+            <Route path="/reviews" element={<Reviews />} />
+            <Route path="/settings/reviews" element={<Reviews />} />
             <Route path="/settings/profile" element={<Profile />} />
+            <Route path="/settings/business-information" element={<BusinessInformation />} />
+            <Route path="/settings/bank-details" element={<BankDetails />} />
+            <Route path="/settings/selling-location" element={<SellingLocation />} />     
 
           </Routes>
         </main>

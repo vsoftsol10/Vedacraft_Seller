@@ -1,7 +1,7 @@
 import { MoreVertical } from "lucide-react";
 import OrderStatusBadge from "./Orderstatusbadge";
 
-export default function OrdersTable({ orders, query }) {
+export default function OrdersTable({ orders, query, onViewOrder }) {
   return (
     <div className="orders-table-wrap">
       <table className="orders-table">
@@ -32,7 +32,7 @@ export default function OrdersTable({ orders, query }) {
               <td>{order.payment}</td>
               <td>{order.date}</td>
               <td>
-                <button className="orders-table__action">
+                <button className="orders-table__action" type="button" aria-label={`View order ${order.id}`} onClick={() => onViewOrder(order)}>
                   <MoreVertical size={16} />
                 </button>
               </td>

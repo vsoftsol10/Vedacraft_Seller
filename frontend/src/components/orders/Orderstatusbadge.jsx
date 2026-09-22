@@ -1,4 +1,5 @@
 const STATUS_CLASS = {
+  Placed: "status-badge--placed",
   Processing: "status-badge--processing",
   Shipped: "status-badge--shipped",
   Delivered: "status-badge--delivered",
