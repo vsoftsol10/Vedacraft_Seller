@@ -3,15 +3,11 @@ import express from "express";
 import cors from "cors";
 import productRoutes from "./routes/productroutes.js";
 import authRoutes from "./routes/authRoutes.js";
-<<<<<<< HEAD
 import profileRoutes from "./routes/profileRoutes.js";
 import businessRoutes from "./routes/businessRoutes.js";
 import sellingLocationRoutes from "./routes/sellingLocationRoutes.js";
 import bankDetailsRoutes from "./routes/bankDetailsRoutes.js";
 import reviewRoutes from "./routes/reviewRoutes.js";
-=======
-import orderRoutes from "./routes/orderRoutes.js";
->>>>>>> 78e1cc33d0dad5fb46c601957e814d18b2277c7a
 
 const app = express();
 const allowedOrigins = (process.env.CLIENT_ORIGIN || process.env.CLIENT_URL || "http://localhost:5173").split(",");
@@ -21,15 +17,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
-<<<<<<< HEAD
 app.use("/api/profile", profileRoutes);
 app.use("/api/business", businessRoutes);
 app.use("/api/selling-locations", sellingLocationRoutes);
 app.use("/api/bank-details", bankDetailsRoutes);
 app.use("/api/reviews", reviewRoutes);
-=======
-app.use("/api/orders", orderRoutes);
->>>>>>> 78e1cc33d0dad5fb46c601957e814d18b2277c7a
 app.get("/", (_req, res) => res.send("Veda Crafts API is running"));
 
 app.use((error, _req, res, _next) => {

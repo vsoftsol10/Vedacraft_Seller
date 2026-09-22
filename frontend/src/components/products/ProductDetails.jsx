@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-=======
 // import { X } from "lucide-react";
 
 // const money = (amount) => `₹${Number(amount ?? 0).toLocaleString("en-IN")}`;
@@ -28,7 +26,6 @@
 // function Section({ title, children }) { return <section className="mt-5 rounded-2xl border border-border-muted bg-surface p-6 first:mt-0 max-[640px]:p-[18px]"><h3 className="mb-4 mt-0 text-base">{title}</h3><div className="grid grid-cols-3 gap-5 max-[640px]:grid-cols-2 max-[640px]:gap-[14px]">{children}</div></section>; }
 // function Detail({ label, value, full = false }) { return <div className={`min-w-0${full ? " col-span-full" : ""}`}><span className="mb-[7px] block text-[13px] font-semibold text-text-primary">{label}</span><strong className="block min-h-[42px] overflow-wrap-anywhere rounded-[10px] border border-avatar bg-surface px-3 py-2.5 text-sm font-normal whitespace-pre-wrap leading-5 text-[#263243]">{shown(value)}</strong></div>; }
 
->>>>>>> 78e1cc33d0dad5fb46c601957e814d18b2277c7a
 // src/components/products/ProductDetails.jsx
 import { X } from "lucide-react";
 

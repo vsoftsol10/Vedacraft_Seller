@@ -17,15 +17,6 @@ export default function OrdersTable({ orders, query, onViewOrder }) {
               <td className="border-b border-[#f3f4f6] px-6 py-4 text-[#374151]">
                 <OrderStatusBadge status={order.status} />
               </td>
-<<<<<<< HEAD
-              <td>{order.payment}</td>
-              <td>{order.date}</td>
-              <td>
-                <button className="orders-table__action" type="button" aria-label={`View order ${order.id}`} onClick={() => onViewOrder(order)}>
-                  <MoreVertical size={16} />
-                </button>
-              </td>
-=======
               <td className="border-b border-[#f3f4f6] px-6 py-4 text-[#374151]">{order.payment}</td><td className="border-b border-[#f3f4f6] px-6 py-4 text-[#374151]">{order.date}</td>
            <td className="border-b border-[#f3f4f6] px-6 py-4 text-[#374151]">
   <button
@@ -37,7 +28,6 @@ export default function OrdersTable({ orders, query, onViewOrder }) {
     View
   </button>
 </td>
->>>>>>> 78e1cc33d0dad5fb46c601957e814d18b2277c7a
             </tr>
           ))}
           {orders.length === 0 && (

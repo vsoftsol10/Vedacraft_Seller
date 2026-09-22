@@ -38,7 +38,6 @@ model Product {
   @@map("seller_products")
 }
 
-<<<<<<< HEAD
 model SellerApplication {
   id              String   @id @default(uuid()) @db.Uuid
   userId          String?  @map("user_id") @db.Uuid
@@ -64,5 +63,3 @@ model SellerSellingLocation {
   @@index([sellerId])
   @@map("seller_selling_locations")
 }
-=======
->>>>>>> 78e1cc33d0dad5fb46c601957e814d18b2277c7a

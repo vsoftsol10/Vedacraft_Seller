@@ -1,19 +1,10 @@
 import { useEffect, useState } from "react";
-<<<<<<< HEAD
-=======
 import { IndianRupee, Package, ShoppingBag, Star } from "lucide-react";
->>>>>>> 78e1cc33d0dad5fb46c601957e814d18b2277c7a
 import OrderStatCard from "../components/orders/Orderstatcard";
 import OrdersToolbar from "../components/orders/Orderstoolbar";
 import OrdersTable from "../components/orders/Orderstable";
 import OrderDetails from "../components/orders/Orderdetails";
-<<<<<<< HEAD
-import { ORDER_STAT_CARDS } from "../components/orders/Ordersconstants";
-import { getOrders } from "../api/orderapi";
-import "../styles/orders.css";
-=======
 import { getOrders, updateOrderStatus } from "../api/orderapi";
->>>>>>> 78e1cc33d0dad5fb46c601957e814d18b2277c7a
 
 export default function Order() {
   const [query, setQuery] = useState("");
@@ -110,15 +101,9 @@ export default function Order() {
 
       <OrdersToolbar query={query} onQueryChange={setQuery} />
 
-<<<<<<< HEAD
-      {error && <p className="orders-page__error">{error}</p>}
-      {isLoading ? <p className="orders-page__loading">Loading orders…</p> : <OrdersTable orders={filteredOrders} query={query} onViewOrder={setSelectedOrder} />}
-      {selectedOrder && <OrderDetails order={selectedOrder} onClose={() => setSelectedOrder(null)} />}
-=======
       {error && <p className="m-0 rounded-lg bg-[#fef3f2] p-4 text-danger">{error}</p>}
       {isLoading ? <p className="m-0 rounded-lg bg-surface p-4 text-[#4b5563]">Loading orders…</p> : <OrdersTable orders={filteredOrders} query={query} onViewOrder={setSelectedOrder} />}
       {selectedOrder && <OrderDetails order={selectedOrder} onClose={() => setSelectedOrder(null)} onUpdateStatus={handleUpdateStatus} />}
->>>>>>> 78e1cc33d0dad5fb46c601957e814d18b2277c7a
     </div>
   );
 }

@@ -1,12 +1,6 @@
+
 @import "tailwindcss";
 
-<<<<<<< HEAD
-@layer base {
-  body {
-    margin: 0;
-    font-family: "Segoe UI", Roboto, Arial, sans-serif;
-    background: #fafafa;
-=======
 @theme {
   --color-surface: #fff;
   --color-border-muted: #eee;
@@ -45,7 +39,6 @@
     margin: 0;
     font-family: "Segoe UI", Roboto, Arial, sans-serif;
     background: var(--color-canvas);
->>>>>>> 78e1cc33d0dad5fb46c601957e814d18b2277c7a
     color: #1f2937;
   }
 }
