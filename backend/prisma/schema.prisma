@@ -52,3 +52,29 @@ model Notification {
   @@index([userId, isRead])
   @@map("notifications")
 }
+
+model SellerApplication {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String?  @map("user_id") @db.Uuid
+  fullName        String?  @map("full_name")
+  businessEmail   String?  @map("business_email")
+  mobileNumber    String?  @map("mobile_number")
+  alternateNumber String?  @map("alternate_number")
+  profileImage    String?  @map("profile_image")
+  updatedAt       DateTime @map("updated_at")
+  sellingLocations SellerSellingLocation[]
+
+  @@map("seller_applications")
+}
+
+model SellerSellingLocation {
+  id        String            @id @default(uuid()) @db.Uuid
+  sellerId  String            @map("seller_id") @db.Uuid
+  state     String
+  city      String
+  createdAt DateTime          @default(now()) @map("created_at")
+  seller    SellerApplication @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  @@index([sellerId])
+  @@map("seller_selling_locations")
+}
