@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Plus, Package, IndianRupee, Box, Star, MoreVertical, Eye, Pencil, Trash2, Check, X } from "lucide-react";
-import { deleteProduct, getProductCategories, getProducts, getProductStats } from "../../api/productapi";
+import { deleteProduct, getProductCategories, getProducts, getProductStats ,updateProductStatus} from "../../api/productapi";
 import ProductDetails from "./ProductDetails";
 import { FORM_ERROR_BANNER } from "../../constants/ui";
 
@@ -49,12 +49,10 @@ const TD_COMMON = "border-b border-[#f5f5f5] text-[14px]";
 const TD = `${TD_COMMON} px-4 py-3.5`;
 const TD_EMPTY = `${TD_COMMON} p-8 text-center text-[#999]`;
 
-const STATUS_DOT_BASE = "mr-1.5 inline-block h-2.5 w-2 rounded-[50%]";
-const STATUS_DOT = {
-  "In Stock": "bg-[#4f9d5d]",
-  "Out of Stock": "bg-[#d9534f]",
-  "Low Stock": "bg-[#f2a93b]",
-};
+const STATUS_BADGE_BASE =
+  "inline-flex cursor-pointer items-center gap-1.5 rounded-full border-0 px-2.5 py-1 text-[12px] font-semibold";
+const STATUS_BADGE_ACTIVE = "bg-[#d9f2df] text-[#277437]";
+const STATUS_BADGE_INACTIVE = "bg-[#fdeceb] text-[#c93636]";
 
 // "action-cell" is also a JS hook: the outside-click handler uses closest(".action-cell").
 const ACTION_CELL = "action-cell relative w-[52px] border-b border-[#f5f5f5] px-4 py-3.5 text-[14px]";
@@ -64,7 +62,8 @@ const ACTION_MENU =
   "absolute right-3 bottom-[42px] z-[5] w-[130px] rounded-lg border border-[#e6e6e6] bg-white p-[5px] shadow-[0_8px_22px_rgba(0,0,0,0.14)]";
 const ACTION_ITEM =
   "flex w-full cursor-pointer items-center gap-2 rounded-md border-0 bg-transparent p-[9px] text-left text-[13px] hover:bg-[#f6f7f6]";
-
+const TOGGLE_TRACK = "relative inline-flex h-6 w-11 cursor-pointer items-center rounded-full border-0 transition-colors";
+const TOGGLE_THUMB = "inline-block h-4 w-4 transform rounded-full bg-white transition-transform";
 export default function ProductsList() {
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
@@ -173,7 +172,22 @@ export default function ProductsList() {
       setActionError(err?.response?.data?.message || "Unable to delete product");
     }
   };
-
+const handleToggleStatus = async (product) => {
+  const nextActive = !product.isActive;
+  // optimistic update
+  setProducts((current) =>
+    current.map((p) => (p._id === product._id ? { ...p, isActive: nextActive } : p))
+  );
+  try {
+    await updateProductStatus(product._id, nextActive);
+  } catch (err) {
+    // revert on failure
+    setProducts((current) =>
+      current.map((p) => (p._id === product._id ? { ...p, isActive: !nextActive } : p))
+    );
+    setActionError(err?.response?.data?.message || "Unable to update product status");
+  }
+};
   const formatDate = (isoDate) => {
     const d = new Date(isoDate);
     return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getFullYear()).slice(2)}`;
@@ -280,7 +294,7 @@ export default function ProductsList() {
               <th className={TH}>Product Name</th>
               <th className={TH}>Category</th>
               <th className={TH}>Price</th>
-              <th className={TH}>Stock</th>
+              <th className={TH}>Status</th>
               <th className={TH}>Date</th>
               <th className={TH}>Action</th>
             </tr>
@@ -299,9 +313,24 @@ export default function ProductsList() {
                 <td className={TD}>{p.category}</td>
                 <td className={TD}>₹{Number(p.pricing?.sellingPrice ?? 0).toLocaleString("en-IN")}</td>
                 <td className={TD}>
-                  <span className={`${STATUS_DOT_BASE} ${STATUS_DOT[p.stockStatus] ?? ""}`} />
-                  {p.stockStatus}
-                </td>
+  <div className="flex items-center gap-2">
+    <button
+      type="button"
+      role="switch"
+      aria-checked={p.isActive}
+      aria-label={`Toggle status for ${p.productName}`}
+      onClick={() => handleToggleStatus(p)}
+      className={`${TOGGLE_TRACK} ${p.isActive ? "bg-[#4f9d5d]" : "bg-[#d9534f]"}`}
+    >
+      <span
+        className={`${TOGGLE_THUMB} ${p.isActive ? "translate-x-6" : "translate-x-1"}`}
+      />
+    </button>
+    <span className={`text-[13px] font-medium ${p.isActive ? "text-[#277437]" : "text-[#c93636]"}`}>
+      {p.isActive ? "Active" : "Inactive"}
+    </span>
+  </div>
+</td>
                 <td className={TD}>{formatDate(p.createdAt)}</td>
                 <td className={ACTION_CELL}>
                   <button className={ACTION_TRIGGER} onClick={() => setMenuId(menuId === p._id ? null : p._id)} aria-label={`Actions for ${p.productName}`}><MoreVertical size={18} /></button>
@@ -335,6 +364,7 @@ function MenuOption({ selected, onClick, children }) {
     </button>
   );
 }
+
 
 function StatCard({ icon, label, value, iconBg }) {
   return (

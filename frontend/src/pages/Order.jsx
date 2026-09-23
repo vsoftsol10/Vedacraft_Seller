@@ -38,7 +38,8 @@ export default function Order() {
           const address = parseJson(record.address, {});
           return {
             rawId: record.id ?? record.idx,
-            id: item.slug || `#${String(record.id ?? record.idx ?? "").slice(0, 8).toUpperCase()}`,
+            // The order number identifies the purchase; a product slug identifies only its item.
+            id: record.order_number || item.slug || `#${String(record.id ?? record.idx ?? "").slice(0, 8).toUpperCase()}`,
             customer: address.fullName || "Customer",
             phone: address.phoneNumber,
             address: [address.address, address.landmark, address.city, address.state, address.pincode].filter(Boolean).join(", "),
