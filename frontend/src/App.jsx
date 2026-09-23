@@ -24,6 +24,8 @@ import Profile from "./pages/Profile";
 import BusinessInformation from "./pages/BusinessInformation";
 import BankDetails from "./pages/BankDetails";
 import SellingLocation from "./pages/SellingLocation";
+import Offers from "./pages/Offers";
+import CreateOffer from "./pages/CreateOffer";
 import { clearSellerSession } from "./api/productapi";
 import { fetchProfile } from "./api/profileapi";
 
@@ -39,7 +41,7 @@ const navItems = [
   { to: "/insights", label: "Insights", icon: LineChart },
   { to: "/earnings", label: "Earnings", icon: Wallet },
   { to: "/reviews", label: "Reviews", icon: Star },
-  { to: "/coupons", label: "Coupons", icon: Ticket },
+  { to: "/settings/offers", label: "Offers", icon: Ticket },
   { to: "/settings", label: "Settings", icon: Settings },
 
 ];
@@ -153,7 +155,9 @@ function SellerPortal() {
             <Route path="/settings/profile" element={<Profile />} />
             <Route path="/settings/business-information" element={<BusinessInformation />} />
             <Route path="/settings/bank-details" element={<BankDetails />} />
-            <Route path="/settings/selling-location" element={<SellingLocation />} />     
+            <Route path="/settings/selling-location" element={<SellingLocation />} /> 
+            <Route path="/settings/offers" element={<Offers />} />
+            <Route path="/settings/offers/new" element={<CreateOffer />} />    
 
           </Routes>
         </main>

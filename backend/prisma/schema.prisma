@@ -38,6 +38,21 @@ model Product {
   @@map("seller_products")
 }
 
+model Notification {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  type      String   @default("order")
+  title     String
+  message   String
+  orderId   String?  @map("order_id") @db.Uuid
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
 model SellerApplication {
   id              String   @id @default(uuid()) @db.Uuid
   userId          String?  @map("user_id") @db.Uuid

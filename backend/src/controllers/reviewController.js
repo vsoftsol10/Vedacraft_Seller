@@ -15,7 +15,7 @@ const escapeLike = (value) => String(value).replace(/[%_,()]/g, "").trim();
 const sellerProducts = async (sellerId) => {
   const { data, error } = await supabase
     .from(productsTable)
-    .select("id, product_name")
+    .select("id, product_id, product_name, cover_image")
     .eq("seller_id", sellerId);
   if (error) throw error;
   return data ?? [];
@@ -33,7 +33,11 @@ const profilesFor = async (userIds) => {
 const toReview = (review, productsById, profilesById) => ({
   id: review.id,
   productId: review.product_id,
-  productName: productsById.get(review.product_id) ?? review.product_name ?? null,
+  // Product details are taken from the seller-owned product record, never from
+  // a value supplied with the review.
+  productName: productsById.get(review.product_id)?.name ?? review.product_name ?? null,
+  productCode: productsById.get(review.product_id)?.code ?? null,
+  productImage: productsById.get(review.product_id)?.image ?? null,
   rating: review.rating,
   title: null,
   reviewText: review.comment ?? null,
@@ -64,7 +68,11 @@ export const getReviews = async (req, res, next) => {
     }
 
     const products = await sellerProducts(req.seller.id);
-    const productsById = new Map(products.map((product) => [product.id, product.product_name]));
+    const productsById = new Map(products.map((product) => [product.id, {
+      name: product.product_name,
+      code: product.product_id,
+      image: product.cover_image,
+    }]));
     let productIds = products.map((product) => product.id);
     if (req.query.productId) productIds = productsById.has(req.query.productId) ? [req.query.productId] : [];
     if (!productIds.length) {
@@ -85,8 +93,13 @@ export const getReviews = async (req, res, next) => {
       if (error) throw error;
       const profilesById = await profilesFor(reviews.map((review) => review.user_id));
       const matchingProfileIds = new Set((matchingProfiles ?? []).map((profile) => profile.id));
+      const matchingProductIds = new Set(products
+        .filter((product) => `${product.product_name} ${product.product_id}`.toLowerCase().includes(search.toLowerCase()))
+        .map((product) => product.id));
       const filtered = reviews.filter((review) =>
-        review.comment?.toLowerCase().includes(search.toLowerCase()) || matchingProfileIds.has(review.user_id),
+        review.comment?.toLowerCase().includes(search.toLowerCase())
+        || matchingProfileIds.has(review.user_id)
+        || matchingProductIds.has(review.product_id),
       );
       const total = filtered.length;
       const data = filtered.slice((page - 1) * limit, page * limit).map((review) => toReview(review, productsById, profilesById));
