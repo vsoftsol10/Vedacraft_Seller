@@ -92,7 +92,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown, Circle, CreditCard, Phone, X } from "lucide-react";
-import OrderStatusBadge from "./Orderstatusbadge";
 
 const TIMELINE = ["Order Received", "Processing", "Packed", "Shipped", "Delivered"];
 const STATUS_INDEX = { Placed: 0, Processing: 1, Packed: 2, Shipped: 3, Delivered: 4, Returned: 0 };

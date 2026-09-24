@@ -1,8 +1,8 @@
 import client from './productapi';
+import { cachedRequest, invalidateCachedRequests } from './requestCache';
 
 export async function fetchBusiness() {
-  const { data } = await client.get('/business');
-  return data.data;
+  return cachedRequest('business', () => client.get('/business').then(({ data }) => data.data), 60_000);
 }
 
 export async function saveBusiness(values) {
@@ -13,6 +13,7 @@ export async function saveBusiness(values) {
   };
   if (values.businessName) payload.businessName = values.businessName;
   const { data } = await client.put('/business', payload);
+  invalidateCachedRequests('business');
   return data.data;
 }
 

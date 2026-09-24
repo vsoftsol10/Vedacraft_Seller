@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { BrowserRouter, Navigate, Routes, Route, NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutGrid,
@@ -14,19 +14,22 @@ import {
   ChevronDown,
   LogOut,
 } from "lucide-react";
-import Products from "./pages/Products";
-import Dashboard from "./pages/Dashboard"
-import AddProduct from "./components/products/Addproduct";
-import Orders from "./pages/Order"
-import Login from "./pages/Login";
-import Reviews from "./pages/Reviews";
-import Profile from "./pages/Profile";
-import BusinessInformation from "./pages/BusinessInformation";
-import BankDetails from "./pages/BankDetails";
-import SellingLocation from "./pages/SellingLocation";
 import { clearSellerSession } from "./api/productapi";
 import { fetchProfile } from "./api/profileapi";
 
+// Route-level splitting prevents pages a seller has not opened from delaying
+// the first dashboard render.
+const Products = lazy(() => import("./pages/Products"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const AddProduct = lazy(() => import("./components/products/Addproduct"));
+const Orders = lazy(() => import("./pages/Order"));
+const Login = lazy(() => import("./pages/Login"));
+const Reviews = lazy(() => import("./pages/Reviews"));
+const Profile = lazy(() => import("./pages/Profile"));
+const BusinessInformation = lazy(() => import("./pages/BusinessInformation"));
+const BankDetails = lazy(() => import("./pages/BankDetails"));
+const SellingLocation = lazy(() => import("./pages/SellingLocation"));
+const Insights = lazy(() => import("./pages/Insights"));
 const NAV_ITEM = "mb-1 flex items-center gap-[10px] rounded-lg px-3 py-2.5 text-sm text-[#444] no-underline hover:bg-[#f5f5f5]";
 const ACTIVE_NAV_ITEM = "bg-[#e4f4e2] font-semibold text-[#2f7a3c]";
 const SETTINGS_BUTTON = `${NAV_ITEM} w-full cursor-pointer border-0 bg-transparent text-left font-[inherit]`;
@@ -35,7 +38,7 @@ const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutGrid },
   { to: "/products", label: "Products", icon: Package },
   { to: "/orders", label: "Orders", icon: ShoppingCart },
-  { to: "/inventory", label: "Inventory", icon: Boxes },
+  // { to: "/inventory", label: "Inventory", icon: Boxes },
   { to: "/insights", label: "Insights", icon: LineChart },
   { to: "/earnings", label: "Earnings", icon: Wallet },
   { to: "/reviews", label: "Reviews", icon: Star },
@@ -47,12 +50,18 @@ const navItems = [
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/*" element={<SellerPortal />} />
-      </Routes>
+      <Suspense fallback={<PageLoading />}>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/*" element={<SellerPortal />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
+}
+
+function PageLoading() {
+  return <div className="min-h-screen bg-white" aria-label="Loading page" />;
 }
 
 function HeaderProfileImage() {
@@ -153,7 +162,9 @@ function SellerPortal() {
             <Route path="/settings/profile" element={<Profile />} />
             <Route path="/settings/business-information" element={<BusinessInformation />} />
             <Route path="/settings/bank-details" element={<BankDetails />} />
-            <Route path="/settings/selling-location" element={<SellingLocation />} />     
+            <Route path="/settings/selling-location" element={<SellingLocation />} />
+            <Route path="/insights" element={<Insights />} />
+
 
           </Routes>
         </main>

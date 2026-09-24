@@ -1,12 +1,13 @@
 import client from './productapi';
+import { cachedRequest, invalidateCachedRequests } from './requestCache';
 
 export async function fetchBankDetails() {
-  const { data } = await client.get('/bank-details');
-  return data.data;
+  return cachedRequest('bank-details', () => client.get('/bank-details').then(({ data }) => data.data), 60_000);
 }
 
 export async function saveBankDetails(values) {
   const { data } = await client.put('/bank-details', values);
+  invalidateCachedRequests('bank-details');
   return data.data;
 }
 

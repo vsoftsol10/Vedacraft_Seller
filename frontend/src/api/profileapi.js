@@ -1,9 +1,9 @@
 // src/api/profileapi.js
 import client from './productapi';
+import { cachedRequest, invalidateCachedRequests } from './requestCache';
 
 export async function fetchProfile() {
-  const { data } = await client.get('/profile');
-  return data.data;
+  return cachedRequest('profile', () => client.get('/profile').then(({ data }) => data.data), 60_000);
 }
 
 /**
@@ -20,6 +20,7 @@ export async function saveProfile(values, { imageFile, removeImage } = {}) {
   if (removeImage) body.append('removeProfileImage', 'true');
 
   const { data } = await client.put('/profile', body);
+  invalidateCachedRequests('profile');
   return data.data;
 }
 
