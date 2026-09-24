@@ -26,6 +26,7 @@ import BankDetails from "./pages/BankDetails";
 import SellingLocation from "./pages/SellingLocation";
 import Offers from "./pages/Offers";
 import CreateOffer from "./pages/CreateOffer";
+import Earning from "./pages/Earning";
 import { clearSellerSession } from "./api/productapi";
 import { fetchProfile } from "./api/profileapi";
 
@@ -150,6 +151,7 @@ function SellerPortal() {
             <Route path="/products/add" element={<AddProduct />} />
             <Route path="/products/:id/edit" element={<AddProduct />} />
             <Route path="/orders" element={<Orders />} />
+            <Route path="/earnings" element={<Earning />} />
             <Route path="/reviews" element={<Reviews />} />
             <Route path="/settings/reviews" element={<Reviews />} />
             <Route path="/settings/profile" element={<Profile />} />

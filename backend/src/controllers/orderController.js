@@ -28,31 +28,18 @@
 // };
 
 import { supabase } from "../config/supabase.js";
+import { getSellerOrders, matchedSellerItems } from "../services/sellerOrders.js";
 
 const ordersTable = "orders";
-const productsTable = "seller_products";
 
 const EDITABLE_STATUSES = ["Processing", "Packed", "Shipped", "Delivered"];
-
-const orderItems = (items) => {
-  if (Array.isArray(items)) return items;
-  try { return JSON.parse(items || "[]"); } catch { return []; }
-};
 
 export const getOrders = async (req, res, next) => {
   try {
     // Orders store product snapshots in `items`. Match those product IDs to the
     // signed-in seller's products so a seller only receives their own orders.
-    const [{ data: products, error: productsError }, { data: orders, error: ordersError }] = await Promise.all([
-      supabase.from(productsTable).select("id").eq("seller_id", req.seller.id),
-      supabase.from(ordersTable).select("*").order("created_at", { ascending: false }),
-    ]);
-    if (productsError) throw productsError;
-    if (ordersError) throw ordersError;
-
-    const productIds = new Set((products ?? []).map(({ id }) => id));
-    const sellerOrders = (orders ?? []).filter((order) => orderItems(order.items).some((item) => productIds.has(item.id)));
-    return res.json({ success: true, data: sellerOrders });
+    const { orders } = await getSellerOrders(req.seller.id);
+    return res.json({ success: true, data: orders });
   } catch (error) {
     return next(error);
   }
@@ -67,16 +54,14 @@ export const updateOrderStatus = async (req, res, next) => {
 
     // Confirm the order belongs to this seller before updating (same ownership
     // check as getOrders, since `orders` has no seller_id column of its own).
-    const [{ data: products, error: productsError }, { data: order, error: orderError }] = await Promise.all([
-      supabase.from(productsTable).select("id").eq("seller_id", req.seller.id),
+    const [{ productIds }, { data: order, error: orderError }] = await Promise.all([
+      getSellerOrders(req.seller.id),
       supabase.from(ordersTable).select("*").eq("id", req.params.id).maybeSingle(),
     ]);
-    if (productsError) throw productsError;
     if (orderError) throw orderError;
     if (!order) return res.status(404).json({ success: false, message: "Order not found" });
 
-    const productIds = new Set((products ?? []).map(({ id }) => id));
-    const owned = orderItems(order.items).some((item) => productIds.has(item.id));
+    const owned = matchedSellerItems(order, productIds).length > 0;
     if (!owned) return res.status(404).json({ success: false, message: "Order not found" });
 
     const updates = { status };
