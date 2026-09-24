@@ -136,7 +136,15 @@ export const createProduct = async (req, res, next) => {
       throw error;
     }
     return res.status(201).json({ success: true, data: toApiProduct(data) });
-  } catch (error) { return next(error); }
+  } catch (error) {
+    // A concurrent offer assignment can pass the pre-check just before deletion.
+    // Keep the database RESTRICT constraint as the final safety net and preserve
+    // the same seller-friendly response in that race.
+    if (error.code === "23503") {
+      return res.status(409).json({ success: false, message: "This product is used in one or more offers. Remove it from those offers before deleting." });
+    }
+    return next(error);
+  }
 };
 
 export const getProducts = async (req, res, next) => {
@@ -224,12 +232,26 @@ export const updateProductStatus = async (req, res, next) => {
 };
 export const deleteProduct = async (req, res, next) => {
   try {
-    const { data, error } = await supabase.from(table).delete().eq("id", req.params.id).eq("seller_id", req.seller.id).select("cover_image, additional_images").maybeSingle();
+    const { data: product, error: productError } = await supabase.from(table).select("id, cover_image, additional_images").eq("id", req.params.id).eq("seller_id", req.seller.id).maybeSingle();
+    if (productError) throw productError;
+    if (!product) return res.status(404).json({ success: false, message: "Product not found" });
+    const { data: offerLink, error: offerLinkError } = await supabase.from("offer_products").select("id").eq("product_id", product.id).limit(1).maybeSingle();
+    if (offerLinkError) throw offerLinkError;
+    if (offerLink) return res.status(409).json({ success: false, message: "This product is used in one or more offers. Remove it from those offers before deleting." });
+    const { data, error } = await supabase.from(table).delete().eq("id", product.id).eq("seller_id", req.seller.id).select("cover_image, additional_images").maybeSingle();
     if (error) throw error;
     if (!data) return res.status(404).json({ success: false, message: "Product not found" });
     await removeProductImages([data.cover_image, ...(data.additional_images ?? [])].map(storagePathFromUrl).filter(Boolean));
     return res.json({ success: true, message: "Product deleted" });
-  } catch (error) { return next(error); }
+  } catch (error) {
+    // A concurrent offer assignment can pass the pre-check just before deletion.
+    // Keep the database RESTRICT constraint as the final safety net and preserve
+    // the same seller-friendly response in that race.
+    if (error.code === "23503") {
+      return res.status(409).json({ success: false, message: "This product is used in one or more offers. Remove it from those offers before deleting." });
+    }
+    return next(error);
+  }
 };
 
 export const downloadBulkTemplate = async (_req, res, next) => {

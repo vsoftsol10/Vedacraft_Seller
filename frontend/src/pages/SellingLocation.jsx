@@ -1,21 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, Search, X } from "lucide-react";
 import { deleteSellingLocationState, fetchSellingLocations, parseSellingLocationApiError, replaceSellingLocationState } from "../api/sellinglocationapi";
+import INDIA_STATES_AND_CITIES from "../data/indiaStatesAndCities";
 
-// UI-only option lists. Replace with API data when the backend is connected.
-const STATE_CITIES = {
-  "Tamil Nadu": ["Chennai", "Coimbatore", "Madurai", "Tiruchirappalli", "Salem", "Tirunelveli"],
-  Kerala: ["Kochi", "Thiruvananthapuram", "Kozhikode", "Kollam", "Thrissur"],
-  Karnataka: ["Bengaluru", "Mysuru", "Mangaluru", "Hubballi"],
-  "Andhra Pradesh": ["Visakhapatnam", "Vijayawada", "Guntur", "Tirupati"],
-  Telangana: ["Hyderabad", "Warangal", "Nizamabad"],
-  Maharashtra: ["Mumbai", "Pune", "Nagpur", "Nashik"],
-  Gujarat: ["Ahmedabad", "Surat", "Vadodara", "Rajkot"],
-  Rajasthan: ["Jaipur", "Jodhpur", "Udaipur", "Kota"],
-  "Uttar Pradesh": ["Lucknow", "Kanpur", "Varanasi", "Agra"],
-  "West Bengal": ["Kolkata", "Howrah", "Durgapur", "Siliguri"],
-  Delhi: ["New Delhi", "Dwarka", "Rohini"],
-};
+const STATE_CITIES = INDIA_STATES_AND_CITIES;
 const STATES = Object.keys(STATE_CITIES);
 
 const matches = (text, query) => text.toLowerCase().includes(query.trim().toLowerCase());
