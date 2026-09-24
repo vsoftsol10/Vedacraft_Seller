@@ -1,17 +1,19 @@
 import client from './productapi';
+import { cachedRequest, invalidateCachedRequests } from './requestCache';
 
 export async function fetchSellingLocations() {
-  const { data } = await client.get('/selling-locations');
-  return data.data;
+  return cachedRequest('selling-locations', () => client.get('/selling-locations').then(({ data }) => data.data), 60_000);
 }
 
 export async function replaceSellingLocationState(state, cities) {
   const { data } = await client.put(`/selling-locations/${encodeURIComponent(state)}`, { cities });
+  invalidateCachedRequests('selling-locations');
   return data.data;
 }
 
 export async function deleteSellingLocationState(state) {
   const { data } = await client.delete(`/selling-locations/${encodeURIComponent(state)}`);
+  invalidateCachedRequests('selling-locations');
   return data.data;
 }
 

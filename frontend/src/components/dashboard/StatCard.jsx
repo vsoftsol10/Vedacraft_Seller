@@ -1,14 +1,3 @@
 export default function StatCard({ icon: Icon, label, value, change, iconBg, iconColor }) {
-  return (
-    <section className="bg-white rounded-lg border border-gray-100 p-5 shadow-sm">
-      <div className="flex items-center gap-3 mb-3">
-        <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${iconBg}`}>
-          <Icon size={18} className={iconColor} />
-        </div>
-        <span className="text-sm text-gray-900">{label}</span>
-      </div>
-      <div className="text-xl font-bold text-gray-900">{value}</div>
-      <div className="text-xs text-gray-700 mt-1">+{change} vs last month</div>
-    </section>
-  );
+  return <section className="rounded-lg border border-gray-100 bg-white p-5 shadow-sm"><div className="mb-3 flex items-center gap-3"><div className={`flex h-9 w-9 items-center justify-center rounded-lg ${iconBg}`}><Icon size={18} className={iconColor} /></div><span className="text-sm text-gray-900">{label}</span></div><div className="text-xl font-bold text-gray-900">{value}</div>{change !== undefined && <div className="mt-1 text-xs text-gray-700">{change > 0 ? "+" : ""}{change}% vs last month</div>}</section>;
 }

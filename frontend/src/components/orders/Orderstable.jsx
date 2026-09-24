@@ -1,4 +1,3 @@
-import { MoreVertical } from "lucide-react";
 import OrderStatusBadge from "./Orderstatusbadge";
 
 export default function OrdersTable({ orders, query, onViewOrder }) {

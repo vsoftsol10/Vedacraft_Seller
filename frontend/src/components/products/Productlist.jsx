@@ -1,4 +1,4 @@
-// // src/components/products/Productlist.jsx
+
 // import { useCallback, useEffect, useState, useRef } from "react";
 // import { useNavigate } from "react-router-dom";
 // import { Search, Plus, Package, IndianRupee, Box, Star, MoreVertical, Eye, Pencil, Trash2, Check, X } from "lucide-react";
@@ -53,6 +53,15 @@
 //   "inline-flex cursor-pointer items-center gap-1.5 rounded-full border-0 px-2.5 py-1 text-[12px] font-semibold";
 // const STATUS_BADGE_ACTIVE = "bg-[#d9f2df] text-[#277437]";
 // const STATUS_BADGE_INACTIVE = "bg-[#fdeceb] text-[#c93636]";
+
+// // Stock-status badge styles, shown in the Stock column instead of a date.
+// const STOCK_BADGE_BASE = "inline-flex items-center rounded-full px-2.5 py-1 text-[12px] font-semibold";
+// const STOCK_BADGE_STYLES = {
+//   "In Stock": "bg-[#d9f2df] text-[#277437]",
+//   "Low Stock": "bg-[#fdeacb] text-[#b76b04]",
+//   "Out of Stock": "bg-[#fdeceb] text-[#c93636]",
+// };
+// const STOCK_STATUS_ORDER = ["Low Stock", "In Stock", "Out of Stock"];
 
 // // "action-cell" is also a JS hook: the outside-click handler uses closest(".action-cell").
 // const ACTION_CELL = "action-cell relative w-[52px] border-b border-[#f5f5f5] px-4 py-3.5 text-[14px]";
@@ -188,9 +197,20 @@
 //     setActionError(err?.response?.data?.message || "Unable to update product status");
 //   }
 // };
-//   const formatDate = (isoDate) => {
-//     const d = new Date(isoDate);
-//     return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getFullYear()).slice(2)}`;
+
+//   // Derives a stock status label from whatever the product record provides:
+//   // an explicit stockStatus string, or a numeric quantity/stock field.
+//   const getStockStatus = (product) => {
+//     if (product.stockStatus && STOCK_STATUS_ORDER.includes(product.stockStatus)) {
+//       return product.stockStatus;
+//     }
+//     const qty = product.stockQuantity ?? product.quantity ?? product.stock;
+//     if (typeof qty === "number") {
+//       if (qty <= 0) return "Out of Stock";
+//       if (qty <= 10) return "Low Stock";
+//       return "In Stock";
+//     }
+//     return product.stockStatus || "—";
 //   };
 
 //   return (
@@ -258,7 +278,7 @@
 //             {openMenu === "stock" && (
 //               <div className={TOOLBAR_MENU} role="menu" aria-label="Filter by stock status">
 //                 <p className={TOOLBAR_MENU_TITLE}>Stock status</p>
-//                 {["", "In Stock", "Out of Stock", "Low Stock"].map((item) => (
+//                 {["", ...STOCK_STATUS_ORDER].map((item) => (
 //                   <MenuOption key={item || "all"} selected={stockStatus === item} onClick={() => handleStockStatusChange(item)}>
 //                     {item || "All products"}
 //                   </MenuOption>
@@ -306,7 +326,9 @@
 //             {!loading && products.length === 0 && (
 //               <tr><td colSpan={7} className={TD_EMPTY}>No products found</td></tr>
 //             )}
-//             {!loading && products.map((p) => (
+//             {!loading && products.map((p) => {
+//               const stockLabel = getStockStatus(p);
+//               return (
 //               <tr key={p._id}>
 //                 <td className={TD}>{p.productId}</td>
 //                 <td className={TD}>{p.productName}</td>
@@ -331,7 +353,11 @@
 //     </span>
 //   </div>
 // </td>
-//                 <td className={TD}>{formatDate(p.createdAt)}</td>
+//                 <td className={TD}>
+//                   <span className={`${STOCK_BADGE_BASE} ${STOCK_BADGE_STYLES[stockLabel] || "bg-[#f1f1f1] text-[#555]"}`}>
+//                     {stockLabel}
+//                   </span>
+//                 </td>
 //                 <td className={ACTION_CELL}>
 //                   <button className={ACTION_TRIGGER} onClick={() => setMenuId(menuId === p._id ? null : p._id)} aria-label={`Actions for ${p.productName}`}><MoreVertical size={18} /></button>
 //                   {menuId === p._id && (
@@ -343,7 +369,8 @@
 //                   )}
 //                 </td>
 //               </tr>
-//             ))}
+//               );
+//             })}
 //           </tbody>
 //         </table>
 //       </div>
@@ -377,13 +404,12 @@
 //     </div>
 //   );
 // }
-
-// src/components/products/Productlist.jsx
 import { useCallback, useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Plus, Package, IndianRupee, Box, Star, MoreVertical, Eye, Pencil, Trash2, Check, X } from "lucide-react";
+import { Search, Plus, Upload, Package, IndianRupee, Box, Star, MoreVertical, Eye, Pencil, Trash2, Check, X } from "lucide-react";
 import { deleteProduct, getProductCategories, getProducts, getProductStats ,updateProductStatus} from "../../api/productapi";
 import ProductDetails from "./ProductDetails";
+import BulkUploadProducts from "./Bulkproductupload";
 import { FORM_ERROR_BANNER } from "../../constants/ui";
 
 /* ---------- Tailwind class constants ---------- */
@@ -392,6 +418,8 @@ const PAGE_TITLE = "mb-1 text-[28px] font-bold";
 const PAGE_SUBTITLE = "text-[14px] text-[#777]";
 const ADD_BTN =
   "flex cursor-pointer items-center gap-1.5 rounded-lg border-0 bg-[#f2a93b] px-[18px] py-3 font-semibold text-white hover:bg-[#e2992b]";
+const BULK_ADD_BTN =
+  "flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#e5e5e5] bg-white px-[18px] py-3 font-semibold text-[#333] hover:bg-[#f7f7f7]";
 
 const STATS_ROW = "mb-5 grid grid-cols-[repeat(4,1fr)] gap-4";
 const STAT_CARD = "flex items-start gap-3 rounded-xl border border-[#eee] bg-white p-4";
@@ -429,11 +457,6 @@ const TD_COMMON = "border-b border-[#f5f5f5] text-[14px]";
 const TD = `${TD_COMMON} px-4 py-3.5`;
 const TD_EMPTY = `${TD_COMMON} p-8 text-center text-[#999]`;
 
-const STATUS_BADGE_BASE =
-  "inline-flex cursor-pointer items-center gap-1.5 rounded-full border-0 px-2.5 py-1 text-[12px] font-semibold";
-const STATUS_BADGE_ACTIVE = "bg-[#d9f2df] text-[#277437]";
-const STATUS_BADGE_INACTIVE = "bg-[#fdeceb] text-[#c93636]";
-
 // Stock-status badge styles, shown in the Stock column instead of a date.
 const STOCK_BADGE_BASE = "inline-flex items-center rounded-full px-2.5 py-1 text-[12px] font-semibold";
 const STOCK_BADGE_STYLES = {
@@ -467,6 +490,7 @@ export default function ProductsList() {
   const [menuId, setMenuId] = useState(null);
   const [viewProduct, setViewProduct] = useState(null);
   const [actionError, setActionError] = useState("");
+  const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
 
   const loadData = useCallback(async (filters = {}) => {
     setLoading(true);
@@ -600,9 +624,14 @@ const handleToggleStatus = async (product) => {
           <h1 className={PAGE_TITLE}>Products</h1>
           <p className={PAGE_SUBTITLE}>Manage your products, inventory and pricing all in one place</p>
         </div>
-        <button className={ADD_BTN} onClick={() => navigate("/products/add")}>
-          <Plus size={18} /> Add Product
-        </button>
+        <div className="flex gap-2.5">
+          <button className={BULK_ADD_BTN} onClick={() => setBulkUploadOpen(true)}>
+            <Upload size={18} /> Bulk Add
+          </button>
+          <button className={ADD_BTN} onClick={() => navigate("/products/add")}>
+            <Plus size={18} /> Add Product
+          </button>
+        </div>
       </div>
 
       <div className={STATS_ROW}>
@@ -755,6 +784,7 @@ const handleToggleStatus = async (product) => {
         </table>
       </div>
       <ProductDetails product={viewProduct} onClose={() => setViewProduct(null)} />
+      {bulkUploadOpen && <BulkUploadProducts onClose={() => setBulkUploadOpen(false)} />}
     </div>
   );
 }

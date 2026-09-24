@@ -3,7 +3,6 @@ import {
   LayoutDashboard,
   Package,
   ShoppingCart,
-  Boxes,
   TrendingUp,
   Wallet,
   Star,
