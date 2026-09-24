@@ -8,11 +8,8 @@ import businessRoutes from "./routes/businessRoutes.js";
 import sellingLocationRoutes from "./routes/sellingLocationRoutes.js";
 import bankDetailsRoutes from "./routes/bankDetailsRoutes.js";
 import reviewRoutes from "./routes/reviewRoutes.js";
-<<<<<<< HEAD
 import offerRoutes from "./routes/offerRoutes.js";
-=======
 import orderRoutes from "./routes/orderRoutes.js";
->>>>>>> 5e873c53387510a5f95a8f373f29194966c76f4f
 
 const app = express();
 const allowedOrigins = (process.env.CLIENT_ORIGIN || process.env.CLIENT_URL || "http://localhost:5173").split(",");
@@ -27,11 +24,8 @@ app.use("/api/business", businessRoutes);
 app.use("/api/selling-locations", sellingLocationRoutes);
 app.use("/api/bank-details", bankDetailsRoutes);
 app.use("/api/reviews", reviewRoutes);
-<<<<<<< HEAD
 app.use("/api/offers", offerRoutes);
-=======
 app.use("/api/orders", orderRoutes);
->>>>>>> 5e873c53387510a5f95a8f373f29194966c76f4f
 app.get("/", (_req, res) => res.send("Veda Crafts API is running"));
 
 app.use((error, _req, res, _next) => {
