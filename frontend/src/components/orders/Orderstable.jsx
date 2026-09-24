@@ -7,13 +7,15 @@ export default function OrdersTable({ orders, query, onViewOrder }) {
       <table className="w-full border-collapse text-left text-sm">
         <thead>
           <tr className="border-b border-[#e5e7eb] text-[#6b7280]">
-            {['Order ID','Customer','Product Name','Items','Amount','Status','Payment','Date','Action'].map((heading) => <th className="px-6 py-4 font-semibold" key={heading}>{heading}</th>)}
+            {['Order ID','Customer','Product Name','Amount','Status','Payment','Date','Action'].map((heading) => <th className="px-6 py-4 font-semibold" key={heading}>{heading}</th>)}
           </tr>
         </thead>
         <tbody>
           {orders.map((order) => (
             <tr className="last:[&>td]:border-0" key={order.id}>
-              <td className="border-b border-[#f3f4f6] px-6 py-4 text-[#374151]">{order.id}</td><td className="border-b border-[#f3f4f6] px-6 py-4 text-[#374151]">{order.customer}</td><td className="border-b border-[#f3f4f6] px-6 py-4 text-[#374151]">{order.product}</td><td className="border-b border-[#f3f4f6] px-6 py-4 text-[#374151]">{order.items}</td><td className="border-b border-[#f3f4f6] px-6 py-4 text-[#374151]">{order.amount}</td>
+              <td className="border-b border-[#f3f4f6] px-6 py-4 text-[#374151]">{order.id}</td><td className="border-b border-[#f3f4f6] px-6 py-4 text-[#374151]">{order.customer}</td><td className="border-b border-[#f3f4f6] px-6 py-4 text-[#374151]">{order.product}</td>
+              {/* <td className="border-b border-[#f3f4f6] px-6 py-4 text-[#374151]">{order.items}</td> */}
+              <td className="border-b border-[#f3f4f6] px-6 py-4 text-[#374151]">{order.amount}</td>
               <td className="border-b border-[#f3f4f6] px-6 py-4 text-[#374151]">
                 <OrderStatusBadge status={order.status} />
               </td>

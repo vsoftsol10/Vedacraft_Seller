@@ -17,7 +17,7 @@ const navItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/" },
   { label: "Products", icon: Package, path: "/products" },
   { label: "Orders", icon: ShoppingCart, path: "/orders" },
-  { label: "Inventory", icon: Boxes, path: "/inventory" },
+  // { label: "Inventory", icon: Boxes, path: "/inventory" },
   { label: "Insights", icon: TrendingUp, path: "/insights" },
   { label: "Earnings", icon: Wallet, path: "/earnings" },
   { label: "Reviews", icon: Star, path: "/reviews" },
