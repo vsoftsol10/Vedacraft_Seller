@@ -1,17 +1,57 @@
 @import "tailwindcss";
 
 /* Keep the Offers table balanced: text columns receive the flexible space while
-   discount, status, and action controls remain compact. */
+   discount and the status control remain compact. */
 .offers-page table {
-  min-width: 760px !important;
+  min-width: 680px !important;
   table-layout: fixed;
 }
 
-.offers-page th:nth-child(1) { width: 28%; }
-.offers-page th:nth-child(2) { width: 15%; }
-.offers-page th:nth-child(3) { width: 31%; }
-.offers-page th:nth-child(4) { width: 14%; }
-.offers-page th:nth-child(5) { width: 12%; }
+.offers-page th:nth-child(1) { width: 29%; }
+.offers-page th:nth-child(2) { width: 16%; }
+.offers-page th:nth-child(3) { width: 33%; }
+.offers-page th:nth-child(4) { width: 22%; }
+
+/* Header-only new-order celebration. The Leaf component can later be replaced by
+   an image in App.jsx without changing these positioning or motion rules. */
+.order-celebration-leaf,
+.order-celebration-particle {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  color: var(--color-brand-green-dark);
+}
+
+.order-celebration-leaf {
+  transform: translate(-50%, -50%) rotate(-20deg);
+  transition: transform 500ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.order-celebration-leaf-arrive {
+  transform: translate(calc(-50% + var(--leaf-fly-x)), calc(-50% + var(--leaf-fly-y))) rotate(18deg);
+}
+
+.order-celebration-particle {
+  width: 11px;
+  height: 11px;
+  animation: order-leaf-blast 580ms ease-out both;
+}
+
+.order-confirmation-pill {
+  position: absolute;
+  top: calc(50% + 25px);
+  right: 68px;
+  border: 1px solid #b9e6c2;
+  border-radius: 999px;
+  background: #e4f4e2;
+  padding: 7px 11px;
+  color: #216b34;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 6px 16px rgba(33, 107, 52, 0.14);
+  animation: order-confirmation 3.2s ease-in-out both;
+}
 
 @theme {
   --color-surface: #fff;
@@ -65,6 +105,16 @@
     from { opacity: 0; transform: scale(0.85); }
     to   { opacity: 1; transform: scale(1); }
   }
+
+  @keyframes order-leaf-blast {
+    from { opacity: 1; transform: translate(-50%, -50%) rotate(0deg) scale(1); }
+    to { opacity: 0; transform: translate(calc(-50% + var(--particle-x)), calc(-50% + var(--particle-y) + 12px)) rotate(var(--particle-rotation)) scale(0.65); }
+  }
+
+  @keyframes order-confirmation {
+    0%, 100% { opacity: 0; transform: translateY(-5px); }
+    10%, 82% { opacity: 1; transform: translateY(0); }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -73,6 +123,13 @@
   .animate-login-bubble-one,
   .animate-login-bubble-two {
     animation: none;
+  }
+
+  .order-celebration-leaf,
+  .order-celebration-particle,
+  .order-confirmation-pill {
+    animation: none;
+    transition: none;
   }
 }
 

@@ -4,121 +4,40 @@ import { Plus, Search } from "lucide-react";
 import { fetchOffers, toggleOffer } from "../api/offerapi";
 import { getProducts } from "../api/productapi";
 
-const STATUS_STYLES = { Active: "bg-green-100 text-green-700", Inactive: "bg-gray-100 text-gray-700", Expired: "bg-red-100 text-red-700" };
 const apiError = (error, fallback) => error?.response?.data?.message || (error?.request && !error?.response ? "Cannot reach the server. Check your connection and try again." : null) || fallback;
 
-function StatusBadge({ status }) {
-  return <span className={`rounded px-2.5 py-1 text-xs font-medium ${STATUS_STYLES[status] || "bg-gray-100 text-gray-700"}`}>{status}</span>;
+function ToggleSwitch({ checked, onChange, disabled }) {
+  return <button type="button" role="switch" aria-checked={checked} aria-label={checked ? "Disable offer" : "Enable offer"} title={disabled ? "Expired offers can't be toggled" : undefined} onClick={onChange} disabled={disabled} className={`relative h-9 w-[66px] shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${checked ? "bg-[#4f9d5d]" : "bg-[#d1d5db]"}`}><span className={`absolute top-1.5 h-6 w-6 rounded-full bg-white shadow-sm transition-transform ${checked ? "translate-x-9" : "translate-x-1.5"}`} /></button>;
 }
 
-function ToggleSwitch({ checked, onChange, disabled }) {
-  return <button type="button" role="switch" aria-checked={checked} aria-label={checked ? "Disable offer" : "Enable offer"} title={disabled ? "Expired offers can't be toggled" : undefined} onClick={onChange} disabled={disabled} className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${checked ? "bg-brand-green-dark" : "bg-gray-300"}`}><span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${checked ? "translate-x-[22px]" : "translate-x-0.5"}`} /></button>;
+function OfferStatus({ offer, onChange, disabled }) {
+  const isExpired = offer.status === "Expired";
+  const label = isExpired ? "Expired" : offer.isActive ? "Active" : "Inactive";
+  const labelColor = isExpired ? "text-red-700" : offer.isActive ? "text-[#16803c]" : "text-gray-600";
+  return <div className="flex items-center gap-3"><ToggleSwitch checked={Boolean(offer.isActive)} onChange={onChange} disabled={disabled || isExpired} /><span className={`text-base font-medium ${labelColor}`}>{label}</span></div>;
 }
 
 function ProductsCell({ offer, productsById, productsLoaded, isOpen, onToggle, popoverRef }) {
   if (offer.scope === "all_products") return <span>All Products</span>;
-
   const productIds = Array.isArray(offer.productIds) ? offer.productIds : [];
   if (offer.scope !== "select_products" || productIds.length === 0) return <span className="text-gray-500">No products selected</span>;
   if (!productsLoaded) return <span className="text-gray-500">Loading products...</span>;
-
   const products = productIds.map((id) => productsById.get(id)).filter(Boolean);
   const unavailableCount = productIds.length - products.length;
   if (products.length === 0) return <span className="text-gray-500">{productIds.length} {productIds.length === 1 ? "product" : "products"} (unavailable)</span>;
   if (productIds.length === 1) return <span className="break-words">{products[0].productName} ({String(products[0].id).slice(0, 8)})</span>;
-
-  return <div ref={isOpen ? popoverRef : null} className="relative inline-block">
-    <button type="button" onClick={onToggle} aria-expanded={isOpen} className="cursor-pointer border-0 bg-transparent p-0 text-left text-green-700 underline decoration-green-300 underline-offset-2 hover:text-green-800">{productIds.length} products</button>
-    {isOpen && <div role="dialog" aria-label={`Products for ${offer.offerName}`} className="absolute left-0 top-[calc(100%+7px)] z-10 max-h-[260px] min-w-[220px] overflow-y-auto rounded-[10px] border border-[#e8e8e8] bg-white p-2 shadow-[0_10px_28px_rgba(0,0,0,0.12)]">
-      {products.map((product) => <p key={product.id} className="m-0 px-2 py-1.5 text-sm text-gray-700">{product.productName} ({String(product.id).slice(0, 8)})</p>)}
-      {unavailableCount > 0 && <p className="m-0 px-2 py-1.5 text-sm text-gray-500">+{unavailableCount} unavailable</p>}
-    </div>}
-  </div>;
+  return <div ref={isOpen ? popoverRef : null} className="relative inline-block"><button type="button" onClick={onToggle} aria-expanded={isOpen} className="cursor-pointer border-0 bg-transparent p-0 text-left text-green-700 underline decoration-green-300 underline-offset-2 hover:text-green-800">{productIds.length} products</button>{isOpen && <div role="dialog" aria-label={`Products for ${offer.offerName}`} className="absolute left-0 top-[calc(100%+7px)] z-10 max-h-[260px] min-w-[220px] overflow-y-auto rounded-[10px] border border-[#e8e8e8] bg-white p-2 shadow-[0_10px_28px_rgba(0,0,0,0.12)]">{products.map((product) => <p key={product.id} className="m-0 px-2 py-1.5 text-sm text-gray-700">{product.productName} ({String(product.id).slice(0, 8)})</p>)}{unavailableCount > 0 && <p className="m-0 px-2 py-1.5 text-sm text-gray-500">+{unavailableCount} unavailable</p>}</div>}</div>;
 }
 
 export default function Offers() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
-  const [toggleError, setToggleError] = useState("");
-  const [offers, setOffers] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [productsLoaded, setProductsLoaded] = useState(false);
-  const [query, setQuery] = useState("");
-  const [togglingId, setTogglingId] = useState(null);
-  const [openProductsOfferId, setOpenProductsOfferId] = useState(null);
-  const productsPopoverRef = useRef(null);
-
-  const loadOffers = async () => {
-    setLoading(true);
-    try { const response = await fetchOffers(); setOffers(response.data ?? []); setLoadError(""); }
-    catch (error) { setLoadError(apiError(error, "Unable to load offers.")); }
-    finally { setLoading(false); }
-  };
-  useEffect(() => {
-    let active = true;
-    const loadInitialOffers = async () => {
-      try {
-        const response = await fetchOffers();
-        if (active) { setOffers(response.data ?? []); setLoadError(""); }
-      } catch (error) {
-        if (active) setLoadError(apiError(error, "Unable to load offers."));
-      } finally {
-        if (active) setLoading(false);
-      }
-    };
-    loadInitialOffers();
-    return () => { active = false; };
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    getProducts({ page: 1, limit: 100 })
-      .then((response) => { if (active) setProducts(response.data ?? []); })
-      .catch(() => { if (active) setProducts([]); })
-      .finally(() => { if (active) setProductsLoaded(true); });
-    return () => { active = false; };
-  }, []);
-
-  useEffect(() => {
-    const closePopover = (event) => {
-      if (event.type === "keydown" && event.key === "Escape") setOpenProductsOfferId(null);
-      if (event.type === "pointerdown" && productsPopoverRef.current && !productsPopoverRef.current.contains(event.target)) setOpenProductsOfferId(null);
-    };
-    document.addEventListener("pointerdown", closePopover);
-    document.addEventListener("keydown", closePopover);
-    return () => {
-      document.removeEventListener("pointerdown", closePopover);
-      document.removeEventListener("keydown", closePopover);
-    };
-  }, []);
-
+  const [loading, setLoading] = useState(true); const [loadError, setLoadError] = useState(""); const [toggleError, setToggleError] = useState(""); const [offers, setOffers] = useState([]); const [products, setProducts] = useState([]); const [productsLoaded, setProductsLoaded] = useState(false); const [query, setQuery] = useState(""); const [togglingId, setTogglingId] = useState(null); const [openProductsOfferId, setOpenProductsOfferId] = useState(null); const productsPopoverRef = useRef(null);
+  const loadOffers = async () => { setLoading(true); try { const response = await fetchOffers(); setOffers(response.data ?? []); setLoadError(""); } catch (error) { setLoadError(apiError(error, "Unable to load offers.")); } finally { setLoading(false); } };
+  useEffect(() => { loadOffers(); }, []);
+  useEffect(() => { let active = true; getProducts({ page: 1, limit: 100 }).then((response) => { if (active) setProducts(response.data ?? []); }).catch(() => { if (active) setProducts([]); }).finally(() => { if (active) setProductsLoaded(true); }); return () => { active = false; }; }, []);
+  useEffect(() => { const closePopover = (event) => { if (event.type === "keydown" && event.key === "Escape") setOpenProductsOfferId(null); if (event.type === "pointerdown" && productsPopoverRef.current && !productsPopoverRef.current.contains(event.target)) setOpenProductsOfferId(null); }; document.addEventListener("pointerdown", closePopover); document.addEventListener("keydown", closePopover); return () => { document.removeEventListener("pointerdown", closePopover); document.removeEventListener("keydown", closePopover); }; }, []);
   const productsById = useMemo(() => new Map(products.map((product) => [product.id, product])), [products]);
-  const filteredOffers = useMemo(() => {
-    if (!query.trim()) return offers;
-    const value = query.trim().toLowerCase();
-    return offers.filter((offer) => offer.offerName.toLowerCase().includes(value));
-  }, [offers, query]);
-
-  const handleToggle = async (offer) => {
-    const isActive = !offer.isActive;
-    const optimisticOffer = { ...offer, isActive, status: isActive ? "Active" : "Inactive" };
-    setTogglingId(offer.id);
-    setToggleError("");
-    setOffers((current) => current.map((item) => item.id === offer.id ? optimisticOffer : item));
-    try {
-      const response = await toggleOffer(offer.id, isActive);
-      setOffers((current) => current.map((item) => item.id === offer.id ? response.data : item));
-    } catch (error) {
-      setOffers((current) => current.map((item) => item.id === offer.id ? offer : item));
-      setToggleError(apiError(error, "Unable to update offer status."));
-    } finally { setTogglingId(null); }
-  };
-
-  return <div className="offers-page flex max-w-[1100px] flex-col gap-5 pb-8 pt-2">
-    <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><h1 className="m-0 text-[32px] font-bold text-gray-900">Offers</h1><p className="mb-0 mt-1.5 text-[15px] text-gray-800">Create and manage discounts to boost your sales.</p></div><button type="button" onClick={() => navigate("/settings/offers/new")} className="flex h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded border border-amber-300 bg-amber-200 px-5 text-sm font-semibold text-gray-900 hover:bg-amber-300"><Plus size={16} /> Create Offer</button></header>
-    <label className="flex h-11 max-w-xl items-center gap-2 rounded border border-gray-200 bg-white px-3"><Search size={16} className="shrink-0 text-gray-500" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search offers" className="w-full border-0 bg-transparent text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none" /></label>
-    {toggleError && <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert"><span>{toggleError}</span><button type="button" onClick={() => setToggleError("")} className="cursor-pointer border-0 bg-transparent p-0 text-red-700 underline">Dismiss</button></div>}
-    <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">{loadError ? <div className="flex items-center justify-between px-4 py-6 text-sm text-red-700"><span>{loadError}</span><button type="button" onClick={loadOffers} className="cursor-pointer rounded border border-red-300 bg-white px-3 py-1 text-red-700">Retry</button></div> : <table className="w-full min-w-[800px] border-collapse text-sm"><thead><tr className="border-b border-gray-200 text-left text-xs font-semibold text-gray-500"><th className="px-4 py-3 font-semibold">Offer Name</th><th className="px-4 py-3 font-semibold">Discount</th><th className="min-w-[260px] px-4 py-3 font-semibold">Products</th><th className="px-4 py-3 font-semibold">Status</th><th className="px-4 py-3 text-right font-semibold">Action</th></tr></thead><tbody>{loading ? [0, 1, 2].map((i) => <tr key={i} className="border-b border-gray-100 last:border-b-0"><td className="px-4 py-4" colSpan={5}><div className="h-4 w-full animate-pulse rounded bg-gray-100" /></td></tr>) : filteredOffers.length === 0 ? <tr><td colSpan={5} className="px-4 py-10 text-center text-sm text-gray-500">{offers.length === 0 ? "No offers yet. Click “Create Offer” to add one." : "No offers match your search."}</td></tr> : filteredOffers.map((offer) => <tr key={offer.id} className="border-b border-gray-100 last:border-b-0"><td className="px-4 py-3.5 text-gray-900">{offer.offerName}</td><td className="px-4 py-3.5 text-gray-700">{offer.discountLabel}</td><td className="max-w-[360px] px-4 py-3.5 text-gray-700"><ProductsCell offer={offer} productsById={productsById} productsLoaded={productsLoaded} isOpen={openProductsOfferId === offer.id} onToggle={() => setOpenProductsOfferId((current) => current === offer.id ? null : offer.id)} popoverRef={productsPopoverRef} /></td><td className="px-4 py-3.5"><StatusBadge status={offer.status} /></td><td className="px-4 py-3.5 text-right"><ToggleSwitch checked={Boolean(offer.isActive)} onChange={() => handleToggle(offer)} disabled={togglingId === offer.id || offer.status === "Expired"} /></td></tr>)}</tbody></table>}</div>
-  </div>;
+  const filteredOffers = useMemo(() => !query.trim() ? offers : offers.filter((offer) => offer.offerName.toLowerCase().includes(query.trim().toLowerCase())), [offers, query]);
+  const handleToggle = async (offer) => { const isActive = !offer.isActive; const optimisticOffer = { ...offer, isActive, status: isActive ? "Active" : "Inactive" }; setTogglingId(offer.id); setToggleError(""); setOffers((current) => current.map((item) => item.id === offer.id ? optimisticOffer : item)); try { const response = await toggleOffer(offer.id, isActive); setOffers((current) => current.map((item) => item.id === offer.id ? response.data : item)); } catch (error) { setOffers((current) => current.map((item) => item.id === offer.id ? offer : item)); setToggleError(apiError(error, "Unable to update offer status.")); } finally { setTogglingId(null); } };
+  return <div className="offers-page flex max-w-[1100px] flex-col gap-5 pb-8 pt-2"><header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><h1 className="m-0 text-[32px] font-bold text-gray-900">Offers</h1><p className="mb-0 mt-1.5 text-[15px] text-gray-800">Create and manage discounts to boost your sales.</p></div><button type="button" onClick={() => navigate("/settings/offers/new")} className="flex h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded border border-amber-300 bg-amber-200 px-5 text-sm font-semibold text-gray-900 hover:bg-amber-300"><Plus size={16} /> Create Offer</button></header><label className="flex h-11 max-w-xl items-center gap-2 rounded border border-gray-200 bg-white px-3"><Search size={16} className="shrink-0 text-gray-500" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search offers" className="w-full border-0 bg-transparent text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none" /></label>{toggleError && <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert"><span>{toggleError}</span><button type="button" onClick={() => setToggleError("")} className="cursor-pointer border-0 bg-transparent p-0 text-red-700 underline">Dismiss</button></div>}<div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">{loadError ? <div className="flex items-center justify-between px-4 py-6 text-sm text-red-700"><span>{loadError}</span><button type="button" onClick={loadOffers} className="cursor-pointer rounded border border-red-300 bg-white px-3 py-1 text-red-700">Retry</button></div> : <table className="w-full min-w-[680px] border-collapse text-sm"><thead><tr className="border-b border-gray-200 text-left text-xs font-semibold text-gray-500"><th className="px-4 py-3 font-semibold">Offer Name</th><th className="px-4 py-3 font-semibold">Discount</th><th className="min-w-[260px] px-4 py-3 font-semibold">Products</th><th className="px-4 py-3 font-semibold">Status</th></tr></thead><tbody>{loading ? [0, 1, 2].map((i) => <tr key={i} className="border-b border-gray-100 last:border-b-0"><td className="px-4 py-4" colSpan={4}><div className="h-4 w-full animate-pulse rounded bg-gray-100" /></td></tr>) : filteredOffers.length === 0 ? <tr><td colSpan={4} className="px-4 py-10 text-center text-sm text-gray-500">{offers.length === 0 ? "No offers yet. Click Create Offer to add one." : "No offers match your search."}</td></tr> : filteredOffers.map((offer) => <tr key={offer.id} className="border-b border-gray-100 last:border-b-0"><td className="px-4 py-3.5 text-gray-900">{offer.offerName}</td><td className="px-4 py-3.5 text-gray-700">{offer.discountLabel}</td><td className="max-w-[360px] px-4 py-3.5 text-gray-700"><ProductsCell offer={offer} productsById={productsById} productsLoaded={productsLoaded} isOpen={openProductsOfferId === offer.id} onToggle={() => setOpenProductsOfferId((current) => current === offer.id ? null : offer.id)} popoverRef={productsPopoverRef} /></td><td className="px-4 py-3.5"><OfferStatus offer={offer} onChange={() => handleToggle(offer)} disabled={togglingId === offer.id} /></td></tr>)}</tbody></table>}</div></div>;
 }
