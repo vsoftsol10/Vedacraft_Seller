@@ -15,11 +15,12 @@ import {
 } from "lucide-react";
 import { clearSellerSession } from "./api/productapi";
 import { fetchProfile } from "./api/profileapi";
+import Dashboard from "./pages/Dashboard";
 
 const Products = lazy(() => import("./pages/Products"));
-const Dashboard = lazy(() => import("./pages/Dashboard"));
 const AddProduct = lazy(() => import("./components/products/Addproduct"));
 const Orders = lazy(() => import("./pages/Order"));
+const Earning = lazy(() => import("./pages/Earning"));
 const Login = lazy(() => import("./pages/Login"));
 const Reviews = lazy(() => import("./pages/Reviews"));
 const Profile = lazy(() => import("./pages/Profile"));
@@ -60,7 +61,15 @@ export default function App() {
 }
 
 function PageLoading() {
-  return <div className="min-h-screen bg-white" aria-label="Loading page" />;
+  return <div className="flex min-h-screen items-center justify-center bg-white" aria-label="Loading page"><LoadingIndicator /></div>;
+}
+
+function ContentLoading() {
+  return <div className="flex min-h-[calc(100vh-9rem)] items-center justify-center" aria-label="Loading page"><LoadingIndicator /></div>;
+}
+
+function LoadingIndicator() {
+  return <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#e4f4e2] border-t-[#2f7a3c]" role="status" aria-label="Loading" />;
 }
 
 function HeaderProfileImage() {
@@ -149,7 +158,8 @@ function SellerPortal() {
             </div>
           </header>
 
-          <Routes>
+          <Suspense fallback={<ContentLoading />}>
+            <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/products" element={<Products />} />
@@ -168,7 +178,8 @@ function SellerPortal() {
             <Route path="/settings/offers" element={<Offers />} />
             <Route path="/settings/offers/new" element={<CreateOffer />} />    
 
-          </Routes>
+            </Routes>
+          </Suspense>
         </main>
       </div>
   );
