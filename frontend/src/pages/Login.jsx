@@ -1,10 +1,23 @@
 import { useState } from "react";
-import { Eye, EyeOff, KeyRound, LoaderCircle, Store } from "lucide-react";
+import { Eye, EyeOff, KeyRound, Lock, LoaderCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { loginSeller } from "../api/authapi";
+import logo from "../assets/images/logo.png";
+import loginBackground from "../assets/images/seller-login-background.png";
+import loginCharacter from "../assets/images/seller-login-character.png";
 
-const inputWrapClass = "flex h-[51px] items-center gap-2.5 rounded-[10px] border border-[#d9e1da] bg-surface px-[13px] text-[#7a8a7d] transition-[border-color,box-shadow] duration-150 focus-within:border-brand-green focus-within:shadow-[0_0_0_3px_#e3f2e5]";
-const inputClass = "min-w-0 w-full border-0 text-[#23372a] outline-0 font-[inherit]";
+const inputWrapClass = "flex h-[3.6em] items-center gap-[.8em] rounded-[.6em] border border-[#e6e4de] bg-[#faf9f6] px-[1.1em] text-[#8a968c] transition-[border-color,box-shadow] duration-150 focus-within:border-brand-green focus-within:shadow-[0_0_0_3px_#e3f2e5]";
+const inputClass = "min-w-0 w-full border-0 bg-transparent text-[1.05em] text-[#23372a] outline-0 font-[inherit] placeholder:text-[#9aa59d]";
+const labelClass = "text-[1em] font-bold text-[#214631]";
+
+function SpeechBubble({ className = "", children }) {
+  return (
+    <div className={`absolute z-30 origin-bottom-left rounded-[1.1em] bg-white px-[1.1em] py-[.6em] text-[.95em] font-medium text-[#2f6b45] shadow-[0_8px_22px_rgba(32,72,47,0.14)] motion-reduce:animate-none ${className}`}>
+      {children}
+      <span className="absolute -left-[.25em] bottom-[.7em] size-[.75em] rotate-45 bg-white" aria-hidden="true" />
+    </div>
+  );
+}
 
 export default function Login() {
   const navigate = useNavigate();
@@ -36,76 +49,85 @@ export default function Login() {
   };
 
   return (
-    <main className="grid min-h-screen grid-cols-[minmax(420px,46%)_1fr] bg-[#fffdf8] max-[800px]:grid-cols-1">
-      <section className="m-auto w-[min(100%,520px)] px-16 py-12 max-[800px]:min-h-screen max-[800px]:px-7 max-[800px]:py-9" aria-labelledby="login-title">
-        <div className="flex items-center gap-2.5 text-[25px] font-extrabold tracking-[-0.7px] text-[#e89b21]" aria-label="VedaCrafts Sellers">
-          <span className="grid size-[42px] place-items-center rounded-[12px_12px_12px_3px] bg-brand-green-dark text-surface"><Store size={24} /></span>
-          <span>Veda<span className="text-brand-green-dark">Crafts</span></span>
+    <main
+      className="relative grid min-h-screen grid-cols-[var(--panel)_1fr] overflow-x-hidden bg-[#fbfcf8] max-[800px]:grid-cols-1"
+      /* --panel = width of the left illustration panel. Change ONLY this value to resize it;
+         the woman, props, bubbles and ground line all scale from it. */
+      style={{ fontSize: "clamp(16px, 0.9vw, 36px)", "--panel": "44vw" }}
+    >
+      {/* LEFT: background + logo + headline (static) + bubbles (animated) */}
+      <aside className="relative min-h-screen overflow-hidden bg-cover bg-bottom max-[800px]:hidden" style={{ backgroundImage: `url(${loginBackground})` }} aria-hidden="true">
+        {/* Logo in the top-left corner (the image file has empty padding, hence the negative offset).
+            Border cropped off; white is lifted and blended into the panel. */}
+        <img src={logo} alt="" className="absolute -left-[5.55em] top-[.3em] h-[11.5em] w-auto mix-blend-multiply [clip-path:inset(5%_3%)] [filter:brightness(1.08)_contrast(1.1)]" />
+
+        {/* Headline block: fixed in place and always visible (no animation) */}
+        <div className="absolute left-[6%] top-[18%] max-w-[38em]">
+          <span className="mb-[.9em] block h-[.3em] w-[3em] rounded-full bg-[#f6c744]" aria-hidden="true" />
+          <h2 className="m-0 max-w-[13em] text-balance text-[2.2em] font-bold leading-[1.1] tracking-[-0.03em] text-[#1f4a30]">Your craft deserves a bigger stage.</h2>
+          <p className="mb-0 mt-[.7em] text-[1em] leading-relaxed text-[#617665]">Join a thoughtful marketplace built for makers, artisans, and independent sellers.</p>
         </div>
 
-        <div className="mb-8 mt-[58px]">
-          <p className="mb-3 mt-0 text-[11px] font-extrabold tracking-[1.5px] text-[#5d936b]">SELLER PORTAL</p>
-          <h1 id="login-title" className="m-0 text-[35px] tracking-[-1.2px] text-[#20372a]">Welcome back</h1>
-          <p className="mb-0 mt-3 leading-[1.5] text-[#66736a]">Sign in to manage your store, products, and orders.</p>
-        </div>
-
-        <form className="grid gap-[9px]" onSubmit={handleSubmit} noValidate>
-          <label className="mt-2.5 text-sm font-bold text-[#34463a]" htmlFor="seller-code">Seller Code</label>
-          <div className={inputWrapClass}>
-            <KeyRound size={18} aria-hidden="true" />
-            <input
-              className={inputClass}
-              id="seller-code"
-              name="sellerCode"
-              type="text"
-              autoComplete="username"
-              placeholder="e.g. VSELL-001"
-              value={sellerCode}
-              onChange={(event) => setSellerCode(event.target.value.toUpperCase())}
-              disabled={isSubmitting}
-            />
-          </div>
-
-          <label className="mt-2.5 text-sm font-bold text-[#34463a]" htmlFor="password">Password</label>
-          <div className={inputWrapClass}>
-            <KeyRound size={18} aria-hidden="true" />
-            <input
-              className={inputClass}
-              id="password"
-              name="password"
-              type={showPassword ? "text" : "password"}
-              autoComplete="current-password"
-              placeholder="Enter your password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              disabled={isSubmitting}
-            />
-            <button
-              className="grid cursor-pointer place-items-center border-0 bg-transparent p-1 text-[#647469]"
-              type="button"
-              onClick={() => setShowPassword((visible) => !visible)}
-              aria-label={showPassword ? "Hide password" : "Show password"}
-            >
-              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
-          </div>
-
-          {error && <p className="mb-0 mt-1 text-[13px] text-danger" role="alert">{error}</p>}
-
-          <button className="mt-5 inline-flex h-[51px] cursor-pointer items-center justify-center gap-2 rounded-[10px] border-0 bg-brand-green-dark font-[inherit] font-bold text-surface transition-colors duration-150 hover:not-disabled:bg-[#28673d] disabled:cursor-wait disabled:opacity-[.72]" type="submit" disabled={isSubmitting}>
-            {isSubmitting && <LoaderCircle className="animate-login-spin" size={18} aria-hidden="true" />}
-            {isSubmitting ? "Signing in..." : "Sign in"}
-          </button>
-        </form>
-      </section>
-
-      <aside className="relative grid min-h-screen items-end justify-items-start overflow-hidden bg-[linear-gradient(135deg,#1d5537,#367c4b_55%,#8dab4f)] p-[72px] text-surface before:absolute before:-right-[110px] before:-top-[330px] before:size-[630px] before:rounded-full before:border before:border-[rgb(255_255_255_/_20%)] before:content-[''] after:absolute after:-bottom-[350px] after:left-[15%] after:size-[480px] after:rounded-full after:border after:border-[rgb(255_255_255_/_20%)] after:content-[''] max-[800px]:hidden" aria-hidden="true">
-        <div className="relative z-1 max-w-[480px]">
-          <p className="mb-[15px] mt-0 text-xs font-extrabold tracking-[1.9px] text-[#e8c66e]">SELL SMARTER. GROW FASTER.</p>
-          <h2 className="m-0 text-[clamp(36px,4.2vw,59px)] leading-[1.08] tracking-[-2.2px]">Your craft deserves a thriving business.</h2>
-          <span className="mt-7 block text-sm text-[#d9ebd8]">VedaCrafts Seller Portal</span>
-        </div>
+        {/* Bubble positions scale with --panel so they stay lined up with her hand and the props */}
+        <SpeechBubble className="animate-login-bubble-one left-[46%] bottom-[calc(var(--panel)*0.516)]">Welcome to Vedacraft!</SpeechBubble>
+        <SpeechBubble className="animate-login-bubble-two bottom-[calc(var(--panel)*0.017)] left-[41%] max-w-[18em]">Let's grow your business together.</SpeechBubble>
       </aside>
+
+      {/* CHARACTER: lives in <main> so she can slide in from the left edge of the screen.
+          Height = 56% of the panel width; feet sit on the ground line of the background. */}
+      <div className="pointer-events-none absolute bottom-[calc(var(--panel)*0.073)] left-[calc(var(--panel)*0.30)] z-20 -translate-x-1/2 max-[800px]:hidden" aria-hidden="true">
+        <img src={loginCharacter} alt="" className="animate-login-character block h-[calc(var(--panel)*0.56)] w-auto motion-reduce:animate-none" />
+      </div>
+
+      {/* RIGHT: login card. min-[801px]:text-[1.4em] scales everything inside it */}
+      <section className="relative z-30 flex min-h-screen items-center justify-center px-[1.75em] py-[2.5em] max-[800px]:px-[1.25em]" aria-labelledby="login-title">
+        <div className="w-full max-w-[30em] rounded-[1em] bg-white px-[2.6em] py-[2.8em] shadow-[0_14px_42px_rgba(31,70,45,0.11)] min-[801px]:text-[1.4em] max-[800px]:px-[1.5em] max-[800px]:py-[2em]">
+          <img src={logo} alt="VedaCrafts" className="mb-[1.5em] hidden h-[4em] w-auto mix-blend-multiply max-[800px]:block" />
+
+          <div className="mb-[2em]">
+            <h1 id="login-title" className="m-0 text-[2.2em] font-normal tracking-[-0.03em] text-[#214631]">Welcome back</h1>
+            <p className="mb-0 mt-[.6em] text-[1.05em] text-[#718173]">Sign in to manage your seller account</p>
+          </div>
+
+          <form className="grid gap-[.5em]" onSubmit={handleSubmit} noValidate>
+            <label className={`mt-[.5em] ${labelClass}`} htmlFor="seller-code">Seller Code</label>
+            <div className={inputWrapClass}>
+              <KeyRound size="1.3em" aria-hidden="true" />
+              <input className={inputClass} id="seller-code" name="sellerCode" type="text" autoComplete="username" placeholder="e.g. VSELL-001" value={sellerCode} onChange={(event) => setSellerCode(event.target.value.toUpperCase())} disabled={isSubmitting} />
+            </div>
+
+            <label className={`mt-[.9em] ${labelClass}`} htmlFor="password">Password</label>
+            <div className={inputWrapClass}>
+              <Lock size="1.3em" aria-hidden="true" />
+              <input className={inputClass} id="password" name="password" type={showPassword ? "text" : "password"} autoComplete="current-password" placeholder="Enter your password" value={password} onChange={(event) => setPassword(event.target.value)} disabled={isSubmitting} />
+              <button className="grid cursor-pointer place-items-center border-0 bg-transparent p-[.25em] text-[#8a968c]" type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? "Hide password" : "Show password"}>
+                {showPassword ? <Eye size="1.35em" /> : <EyeOff size="1.35em" />}
+              </button>
+            </div>
+
+            {/* Visual only for now: not wired to any logic */}
+            <div className="mt-[.7em] flex items-center justify-between text-[.98em]">
+              <label className="flex cursor-pointer items-center gap-[.6em] text-[#5d6f62]" htmlFor="remember">
+                <input id="remember" type="checkbox" className="size-[1.15em] cursor-pointer accent-[#2f7d4a]" disabled={isSubmitting} />
+                Remember me
+              </label>
+              <button type="button" className="cursor-pointer border-0 bg-transparent p-0 font-[inherit] font-bold text-[#2f7d4a] hover:underline">Forgot password?</button>
+            </div>
+
+            {error && <p className="mb-0 mt-[.25em] text-[.95em] text-danger" role="alert">{error}</p>}
+
+            <button className="mt-[1em] inline-flex h-[3.6em] cursor-pointer items-center justify-center gap-[.5em] rounded-[.6em] border-0 bg-[#f6c744] font-[inherit] text-[1.05em] font-bold text-[#1f3d2b] transition-colors duration-150 hover:not-disabled:bg-[#efb92a] disabled:cursor-wait disabled:opacity-[.72]" type="submit" disabled={isSubmitting}>
+              {isSubmitting && <LoaderCircle className="animate-login-spin" size="1.3em" aria-hidden="true" />}
+              {isSubmitting ? "Signing in..." : "Sign in"}
+            </button>
+          </form>
+
+          <p className="mb-0 mt-[1.6em] text-center text-[.95em] text-[#718173]">
+            New to Vedacraft?{" "}
+            <button type="button" className="cursor-pointer border-0 bg-transparent p-0 font-[inherit] font-bold text-[#2f7d4a] hover:underline">Become a seller</button>
+          </p>
+        </div>
+      </section>
     </main>
   );
 }

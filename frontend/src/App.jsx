@@ -16,8 +16,6 @@ import {
 import { clearSellerSession } from "./api/productapi";
 import { fetchProfile } from "./api/profileapi";
 
-// Route-level splitting prevents pages a seller has not opened from delaying
-// the first dashboard render.
 const Products = lazy(() => import("./pages/Products"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const AddProduct = lazy(() => import("./components/products/Addproduct"));
@@ -158,6 +156,7 @@ function SellerPortal() {
             <Route path="/products/add" element={<AddProduct />} />
             <Route path="/products/:id/edit" element={<AddProduct />} />
             <Route path="/orders" element={<Orders />} />
+            <Route path="/earnings" element={<Earning />} />
             <Route path="/reviews" element={<Reviews />} />
             <Route path="/settings/reviews" element={<Reviews />} />
             <Route path="/settings/profile" element={<Profile />} />

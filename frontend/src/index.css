@@ -1,5 +1,17 @@
-
 @import "tailwindcss";
+
+/* Keep the Offers table balanced: text columns receive the flexible space while
+   discount, status, and action controls remain compact. */
+.offers-page table {
+  min-width: 760px !important;
+  table-layout: fixed;
+}
+
+.offers-page th:nth-child(1) { width: 28%; }
+.offers-page th:nth-child(2) { width: 15%; }
+.offers-page th:nth-child(3) { width: 31%; }
+.offers-page th:nth-child(4) { width: 14%; }
+.offers-page th:nth-child(5) { width: 12%; }
 
 @theme {
   --color-surface: #fff;
@@ -21,12 +33,46 @@
   --color-canvas: #fafafa;
   --color-avatar: #ddd;
   --color-nav-active: #2f7a3c;
+
   --animate-login-spin: login-spin 0.8s linear infinite;
+
+  /* Login page timeline: she lands at 1.6s (0.2s delay + 1.4s slide).
+     Headline and bubbles start only after that. */
+  --animate-login-character: login-character-slide 1.4s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;
+  --animate-login-content: login-fade-up 0.6s ease-out 1.65s both;
+  --animate-login-bubble-one: login-bubble-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 2s both;
+  --animate-login-bubble-two: login-bubble-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 2.35s both;
 
   @keyframes login-spin {
     to {
       transform: rotate(360deg);
     }
+  }
+
+  /* Starts fully off the left edge of the screen and slides right to her spot.
+     -24vw moves her past the edge (her right edge sits about 20vw from the left at rest). */
+  @keyframes login-character-slide {
+    from { transform: translateX(-24vw); }
+    to   { transform: translateX(0); }
+  }
+
+  @keyframes login-fade-up {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes login-bubble-in {
+    from { opacity: 0; transform: scale(0.85); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-login-character,
+  .animate-login-content,
+  .animate-login-bubble-one,
+  .animate-login-bubble-two {
+    animation: none;
   }
 }
 
