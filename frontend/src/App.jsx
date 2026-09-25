@@ -4,7 +4,6 @@ import {
   LayoutGrid,
   Package,
   ShoppingCart,
-  Boxes,
   LineChart,
   Wallet,
   Star,
@@ -14,18 +13,6 @@ import {
   ChevronDown,
   LogOut,
 } from "lucide-react";
-import Products from "./pages/Products";
-import Dashboard from "./pages/Dashboard"
-import AddProduct from "./components/products/Addproduct";
-import Orders from "./pages/Order"
-import Login from "./pages/Login";
-import Reviews from "./pages/Reviews";
-import Profile from "./pages/Profile";
-import BusinessInformation from "./pages/BusinessInformation";
-import BankDetails from "./pages/BankDetails";
-import SellingLocation from "./pages/SellingLocation";
-import Offers from "./pages/Offers";
-import CreateOffer from "./pages/CreateOffer";
 import { clearSellerSession } from "./api/productapi";
 import { fetchProfile } from "./api/profileapi";
 
@@ -42,6 +29,8 @@ const BusinessInformation = lazy(() => import("./pages/BusinessInformation"));
 const BankDetails = lazy(() => import("./pages/BankDetails"));
 const SellingLocation = lazy(() => import("./pages/SellingLocation"));
 const Insights = lazy(() => import("./pages/Insights"));
+const Offers = lazy(() => import("./pages/Offers"));
+const CreateOffer = lazy(() => import("./pages/CreateOffer"));
 const NAV_ITEM = "mb-1 flex items-center gap-[10px] rounded-lg px-3 py-2.5 text-sm text-[#444] no-underline hover:bg-[#f5f5f5]";
 const ACTIVE_NAV_ITEM = "bg-[#e4f4e2] font-semibold text-[#2f7a3c]";
 const SETTINGS_BUTTON = `${NAV_ITEM} w-full cursor-pointer border-0 bg-transparent text-left font-[inherit]`;
@@ -177,7 +166,6 @@ function SellerPortal() {
             <Route path="/settings/selling-location" element={<SellingLocation />} />
             <Route path="/insights" element={<Insights />} />
 
-            <Route path="/settings/selling-location" element={<SellingLocation />} /> 
             <Route path="/settings/offers" element={<Offers />} />
             <Route path="/settings/offers/new" element={<CreateOffer />} />    
 
