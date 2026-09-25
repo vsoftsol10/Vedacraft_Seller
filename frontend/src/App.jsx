@@ -15,11 +15,10 @@ import {
   LogOut,
 } from "lucide-react";
 import api, { clearSellerSession } from "./api/productapi";
+import { clearSellerSession } from "./api/productapi";
 import { fetchProfile } from "./api/profileapi";
 import logo from "./assets/images/logo-transparent.png";
 
-// Route-level splitting prevents pages a seller has not opened from delaying
-// the first dashboard render.
 const Products = lazy(() => import("./pages/Products"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const AddProduct = lazy(() => import("./components/products/Addproduct"));
