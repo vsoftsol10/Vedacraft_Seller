@@ -112,6 +112,7 @@
 
 
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { IndianRupee, Package, ShoppingBag, Star } from "lucide-react";
 import OrderStatCard from "../components/orders/Orderstatcard";
 import OrdersToolbar from "../components/orders/Orderstoolbar";
@@ -120,6 +121,7 @@ import OrderDetails from "../components/orders/Orderdetails";
 import { getOrders, updateOrderStatus } from "../api/orderapi";
 
 export default function Order() {
+  const location = useLocation();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("none");
@@ -148,7 +150,7 @@ export default function Order() {
         const response = await getOrders();
         const records = Array.isArray(response) ? response : response.data ?? [];
         if (!active) return;
-        setOrders(records.map((record) => {
+        const mappedOrders = records.map((record) => {
           const items = parseJson(record.items, []);
           const item = Array.isArray(items) ? items[0] ?? {} : {};
           const address = parseJson(record.address, {});
@@ -167,7 +169,10 @@ export default function Order() {
             date: formatDate(record.created_at),
             image: imageUrl(item.image),
           };
-        }));
+        });
+        setOrders(mappedOrders);
+        const selectedOrderId = location.state?.selectedOrderId;
+        if (selectedOrderId) setSelectedOrder(mappedOrders.find((order) => order.rawId === selectedOrderId) ?? null);
       } catch (requestError) {
         if (active) setError(requestError.response?.data?.message || "Unable to load orders.");
       } finally {
@@ -176,7 +181,7 @@ export default function Order() {
     };
     loadOrders();
     return () => { active = false; };
-  }, []);
+  }, [location.state]);
 
   const paymentTypeOptions = [
     { value: "none", label: "Default" },

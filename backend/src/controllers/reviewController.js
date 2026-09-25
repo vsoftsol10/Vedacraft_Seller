@@ -33,6 +33,7 @@ const profilesFor = async (userIds) => {
 const toReview = (review, productsById, profilesById) => ({
   id: review.id,
   productId: review.product_id,
+  orderId: review.order_id,
   // Product details are taken from the seller-owned product record, never from
   // a value supplied with the review.
   productName: productsById.get(review.product_id)?.name ?? review.product_name ?? null,
@@ -50,7 +51,7 @@ const toReview = (review, productsById, profilesById) => ({
 const reviewQuery = (productIds, rating, search) => {
   let query = supabase
     .from(reviewsTable)
-    .select("id, user_id, product_id, product_name, rating, comment, image_urls, created_at", { count: "exact" })
+    .select("id, user_id, product_id, order_id, product_name, rating, comment, image_urls, created_at", { count: "exact" })
     .in("product_id", productIds)
     .order("created_at", { ascending: false });
   if (rating !== undefined) query = query.eq("rating", rating);
@@ -123,10 +124,10 @@ export const getReviewStats = async (req, res, next) => {
     const products = await sellerProducts(req.seller.id);
     const productIds = products.map((product) => product.id);
     if (!productIds.length) {
-      return res.json({ success: true, data: { averageRating: 0, totalReviews: 0, ratingBreakdown: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 } } });
+      return res.json({ success: true, data: { averageRating: 0, totalReviews: 0, newReviews: 0, ratingBreakdown: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 } } });
     }
 
-    const { data: reviews, error } = await supabase.from(reviewsTable).select("rating").in("product_id", productIds);
+    const { data: reviews, error } = await supabase.from(reviewsTable).select("rating, created_at").in("product_id", productIds);
     if (error) throw error;
     const ratingBreakdown = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
     let ratingTotal = 0;
@@ -137,9 +138,11 @@ export const getReviewStats = async (req, res, next) => {
       }
     }
     const totalReviews = reviews.length;
+    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const newReviews = reviews.filter((review) => new Date(review.created_at).getTime() >= sevenDaysAgo).length;
     return res.json({
       success: true,
-      data: { averageRating: totalReviews ? Number((ratingTotal / totalReviews).toFixed(2)) : 0, totalReviews, ratingBreakdown },
+      data: { averageRating: totalReviews ? Number((ratingTotal / totalReviews).toFixed(2)) : 0, totalReviews, newReviews, ratingBreakdown },
     });
   } catch (error) { return next(error); }
 };

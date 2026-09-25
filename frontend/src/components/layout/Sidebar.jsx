@@ -10,7 +10,7 @@ import {
   Settings,
 
 } from "lucide-react";
-import logo from "../../assets/images/logo.png";
+import logo from "../../assets/images/logo-transparent.png";
 
 const navItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/" },

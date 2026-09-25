@@ -8,6 +8,7 @@ const recentOrder = (order, productIds) => {
   const items = matchedSellerItems(order, productIds);
   const names = [...new Set(items.map((item) => item.name).filter(Boolean))];
   return {
+    rawId: order.id,
     id: order.order_number || items[0]?.slug || `#${String(order.id || "").slice(0, 8).toUpperCase()}`,
     productNames: names.join(", ") || order.product || "Product",
     date: order.created_at,

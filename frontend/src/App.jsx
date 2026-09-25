@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { BrowserRouter, Navigate, Routes, Route, NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutGrid,
@@ -11,8 +11,10 @@ import {
   Settings,
   Bell,
   ChevronDown,
+  Leaf,
   LogOut,
 } from "lucide-react";
+import api, { clearSellerSession } from "./api/productapi";
 import { clearSellerSession } from "./api/productapi";
 import { fetchProfile } from "./api/profileapi";
 import Dashboard from "./pages/Dashboard";
@@ -28,6 +30,7 @@ const BusinessInformation = lazy(() => import("./pages/BusinessInformation"));
 const BankDetails = lazy(() => import("./pages/BankDetails"));
 const SellingLocation = lazy(() => import("./pages/SellingLocation"));
 const Insights = lazy(() => import("./pages/Insights"));
+// const Earning = lazy(() => import("./pages/Earning"));
 const Offers = lazy(() => import("./pages/Offers"));
 const CreateOffer = lazy(() => import("./pages/CreateOffer"));
 const NAV_ITEM = "mb-1 flex items-center gap-[10px] rounded-lg px-3 py-2.5 text-sm text-[#444] no-underline hover:bg-[#f5f5f5]";
@@ -97,13 +100,104 @@ function HeaderProfileImage() {
   return <img src={imageUrl} alt="Profile" className="h-9 w-9 rounded-full object-cover" onError={() => setImageUrl(null)} />;
 }
 
+function NewOrderCelebration({ headerRef, bellRef, sellerId }) {
+  const [celebration, setCelebration] = useState(null);
+  const [toastVisible, setToastVisible] = useState(false);
+  const isPlayingRef = useRef(false);
+  const toastTimerRef = useRef(null);
+  const blastTimerRef = useRef(null);
+
+  useEffect(() => () => {
+    window.clearTimeout(toastTimerRef.current);
+    window.clearTimeout(blastTimerRef.current);
+  }, []);
+
+  useEffect(() => {
+    if (!sellerId) return undefined;
+    const storageKey = `vedacrafts:lastSeenOrderAt:${sellerId}`;
+    let cancelled = false;
+
+    const showToast = () => {
+      setToastVisible(true);
+      window.clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = window.setTimeout(() => setToastVisible(false), 3200);
+    };
+
+    const playCelebration = () => {
+      if (isPlayingRef.current) return;
+      isPlayingRef.current = true;
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        showToast();
+        isPlayingRef.current = false;
+        return;
+      }
+
+      const header = headerRef.current;
+      const bell = bellRef.current;
+      if (!header || !bell) { isPlayingRef.current = false; return; }
+      const headerBox = header.getBoundingClientRect();
+      const bellBox = bell.getBoundingClientRect();
+      const targetX = bellBox.left - headerBox.left + (bellBox.width / 2);
+      const targetY = bellBox.top - headerBox.top + (bellBox.height / 2);
+      const edge = Math.floor(Math.random() * 4);
+      const start = edge === 0 ? { x: Math.random() * headerBox.width, y: -18 } : edge === 1 ? { x: headerBox.width + 18, y: Math.random() * headerBox.height } : edge === 2 ? { x: Math.random() * headerBox.width, y: headerBox.height + 18 } : { x: -18, y: Math.random() * headerBox.height };
+      const particles = Array.from({ length: 9 }, (_, index) => ({ id: index, x: Math.round((Math.random() - 0.5) * 92), y: Math.round((Math.random() - 0.35) * 74), rotation: Math.round((Math.random() - 0.5) * 180), delay: index * 18 }));
+      setCelebration({ phase: "fly", start, target: { x: targetX, y: targetY }, particles });
+      window.requestAnimationFrame(() => setCelebration((current) => current ? { ...current, phase: "arrive" } : current));
+    };
+
+    const checkLatestOrder = async () => {
+      try {
+        const response = await api.get("/orders/latest");
+        if (cancelled) return;
+        const latest = response.data?.data;
+        const previous = localStorage.getItem(storageKey);
+        if (previous === null) {
+          localStorage.setItem(storageKey, latest?.createdAt || "");
+          return;
+        }
+        if (latest?.createdAt && (!previous || new Date(latest.createdAt) > new Date(previous))) {
+          localStorage.setItem(storageKey, latest.createdAt);
+          playCelebration();
+        }
+      } catch {
+        // Header celebrations are non-critical; failed polls deliberately stay silent.
+      }
+    };
+
+    checkLatestOrder();
+    const intervalId = window.setInterval(checkLatestOrder, 60_000);
+    return () => { cancelled = true; window.clearInterval(intervalId); };
+  }, [bellRef, headerRef, sellerId]);
+
+  const handleLeafArrival = (event) => {
+    if (event.propertyName !== "transform") return;
+    setCelebration((current) => current ? { ...current, phase: "blast" } : current);
+    setToastVisible(true);
+    window.clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = window.setTimeout(() => setToastVisible(false), 3200);
+    window.clearTimeout(blastTimerRef.current);
+    blastTimerRef.current = window.setTimeout(() => { setCelebration(null); isPlayingRef.current = false; }, 650);
+  };
+
+  return <div className="pointer-events-none absolute inset-0 z-30 overflow-hidden" aria-live="polite">
+    {celebration?.phase !== "blast" && <Leaf aria-hidden="true" onTransitionEnd={handleLeafArrival} className={`order-celebration-leaf motion-reduce:animate-none ${celebration?.phase === "arrive" ? "order-celebration-leaf-arrive" : ""}`} style={{ left: celebration?.start.x, top: celebration?.start.y, "--leaf-fly-x": `${(celebration?.target.x || 0) - (celebration?.start.x || 0)}px`, "--leaf-fly-y": `${(celebration?.target.y || 0) - (celebration?.start.y || 0)}px` }} />}
+    {celebration?.phase === "blast" && celebration.particles.map((particle) => <Leaf key={particle.id} aria-hidden="true" className="order-celebration-particle motion-reduce:animate-none" style={{ left: celebration.target.x, top: celebration.target.y, "--particle-x": `${particle.x}px`, "--particle-y": `${particle.y}px`, "--particle-rotation": `${particle.rotation}deg`, animationDelay: `${particle.delay}ms` }} />)}
+    {toastVisible && <div className="order-confirmation-pill motion-reduce:animate-none">New order confirmed</div>}
+  </div>;
+}
+
 function SellerPortal() {
   const navigate = useNavigate();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const headerRef = useRef(null);
+  const bellRef = useRef(null);
+  let sellerId = null;
   let isAuthenticated = false;
   try {
     const session = JSON.parse(sessionStorage.getItem("vedacraftsSeller") || "null");
     isAuthenticated = Boolean(session?.token);
+    if (isAuthenticated) sellerId = session.sellerId || session.applicationId || null;
     if (!isAuthenticated) sessionStorage.removeItem("vedacraftsSeller");
   } catch {
     sessionStorage.removeItem("vedacraftsSeller");
@@ -120,8 +214,10 @@ function SellerPortal() {
       <div className="flex min-h-screen">
         <aside className="sticky top-0 flex h-screen w-60 shrink-0 self-start flex-col overflow-y-auto border-r border-[#eee] bg-white px-4 py-6">
           <div className="mb-4 border-b border-[#eee] px-2 pb-6">
-            <span className="text-[22px] font-bold text-[#f2a93b]">Veda<span className="text-[#4f9d5d]">Crafts</span></span>
-            <span className="mt-0.5 block text-[11px] text-[#999]">Connect | Collaborate | Grow</span>
+            <div className="h-[52px] overflow-hidden">
+              <img src={logo} alt="VedaCrafts" className="h-16 w-auto" />
+            </div>
+            <span className="mt-1 block whitespace-nowrap text-[10px] tracking-[0.02em] text-[#66756a]">Connect | Collaborate | Grow</span>
           </div>
           <nav className="flex-1">
             {navItems.map(({ to, label, icon: Icon }) => label === "Settings" ? (
@@ -148,14 +244,15 @@ function SellerPortal() {
         </aside>
 
         <main className="flex-1 px-8 py-6">
-          <header className="sticky top-0 z-20 -mx-8 -mt-6 mb-5 flex items-center justify-between gap-4 border-b border-[#e5e7eb] bg-white px-8 py-4">
+          <header ref={headerRef} className="sticky top-0 z-20 -mx-8 -mt-6 mb-5 flex items-center justify-between gap-4 border-b border-[#e5e7eb] bg-white px-8 py-4">
             <div className="max-w-[500px] flex-1">
               <input className="w-full rounded-lg border border-[#e5e5e5] px-3.5 py-2.5 text-sm" placeholder="Search" />
             </div>
-            <div className="flex items-center gap-4">
-              <Bell size={20} />
+            <div className="relative flex items-center gap-4">
+              <span ref={bellRef} className="relative z-10 flex"><Bell size={20} /></span>
               <HeaderProfileImage />
             </div>
+            <NewOrderCelebration headerRef={headerRef} bellRef={bellRef} sellerId={sellerId} />
           </header>
 
           <Suspense fallback={<ContentLoading />}>
