@@ -3,7 +3,7 @@ import OrderStatusBadge from "./Orderstatusbadge";
 export default function OrdersTable({ orders, query, onViewOrder }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-[#e5e7eb] bg-surface">
-      <table className="w-full border-collapse text-left text-sm">
+      <table className="w-full min-w-[900px] border-collapse text-left text-sm lg:min-w-[auto]">
         <thead>
           <tr className="border-b border-[#e5e7eb] text-[#6b7280]">
             {['Order ID','Customer','Product Name','Amount','Status','Payment','Date','Action'].map((heading) => <th className="px-6 py-4 font-semibold" key={heading}>{heading}</th>)}
@@ -21,7 +21,7 @@ export default function OrdersTable({ orders, query, onViewOrder }) {
               <td className="border-b border-[#f3f4f6] px-6 py-4 text-[#374151]">{order.payment}</td><td className="border-b border-[#f3f4f6] px-6 py-4 text-[#374151]">{order.date}</td>
            <td className="border-b border-[#f3f4f6] px-6 py-4 text-[#374151]">
   <button
-    className="cursor-pointer rounded-md border-0 bg-[#d9f2df] px-3 py-1.5 text-sm font-medium text-[#1a7f37] hover:bg-[#c3ecd0]"
+    className="min-h-10 cursor-pointer rounded-md border-0 bg-[#d9f2df] px-3 py-1.5 text-sm font-medium text-[#1a7f37] hover:bg-[#c3ecd0] lg:min-h-0"
     type="button"
     aria-label={`View order ${order.id}`}
     onClick={() => onViewOrder(order)}

@@ -5,9 +5,9 @@ import TopSellingProducts from "../components/insights/TopsellingProduct";
 
 export default function Insights() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Insights</h1>
+        <h1 className="text-[26px] font-bold text-gray-900 sm:text-3xl">Insights</h1>
         <p className="mt-1 text-sm text-gray-700">
           Manage your stock, track levels and never run out of your bestseller
         </p>

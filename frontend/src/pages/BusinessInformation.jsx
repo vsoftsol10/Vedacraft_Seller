@@ -198,24 +198,24 @@ export default function BusinessInformation() {
   };
 
   if (loading) {
-    return <div className="flex max-w-[1100px] flex-col gap-5 pb-8 pt-2"><header><h1 className="m-0 text-[32px] font-bold text-gray-900">Business Information</h1><p className="mb-0 mt-1.5 text-[15px] text-gray-800">Manage your personal and store profile information.</p></header><p className="m-0 text-sm text-gray-500">Loading business information…</p></div>;
+    return <div className="flex max-w-[1100px] flex-col gap-5 pb-8 pt-2"><header><h1 className="m-0 text-[26px] font-bold text-gray-900 sm:text-[32px]">Business Information</h1><p className="mb-0 mt-1.5 text-[15px] text-gray-800">Manage your personal and store profile information.</p></header><p className="m-0 text-sm text-gray-500">Loading business information…</p></div>;
   }
 
   if (loadFailed) {
-    return <div className="flex max-w-[1100px] flex-col gap-5 pb-8 pt-2"><header><h1 className="m-0 text-[32px] font-bold text-gray-900">Business Information</h1><p className="mb-0 mt-1.5 text-[15px] text-gray-800">Manage your personal and store profile information.</p></header><p className="m-0 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{banner?.text || "Unable to load business information."}</p><button type="button" onClick={loadBusiness} className="w-fit rounded border border-gray-900 bg-white px-4 py-2 text-sm font-semibold text-gray-900">Retry</button></div>;
+    return <div className="flex max-w-[1100px] flex-col gap-5 pb-8 pt-2"><header><h1 className="m-0 text-[26px] font-bold text-gray-900 sm:text-[32px]">Business Information</h1><p className="mb-0 mt-1.5 text-[15px] text-gray-800">Manage your personal and store profile information.</p></header><p className="m-0 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{banner?.text || "Unable to load business information."}</p><button type="button" onClick={loadBusiness} className="w-fit rounded border border-gray-900 bg-white px-4 py-2 text-sm font-semibold text-gray-900">Retry</button></div>;
   }
 
   return (
     <div className="flex max-w-[1100px] flex-col gap-5 pb-8 pt-2">
       <header>
-        <h1 className="m-0 text-[32px] font-bold text-gray-900">Business Information</h1>
+        <h1 className="m-0 text-[26px] font-bold text-gray-900 sm:text-[32px]">Business Information</h1>
         <p className="mb-0 mt-1.5 text-[15px] text-gray-800">Manage your personal and store profile information.</p>
       </header>
 
       <section className="flex flex-col gap-4 rounded-[14px] border border-gray-200 bg-white px-3 pb-5 pt-4">
         <h2 className="m-0 ml-1 text-[15px] font-bold text-gray-900">Store Details</h2>
 
-        <div className="grid grid-cols-1 gap-x-3 gap-y-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-x-3 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
           {renderField({ label: "Business Name", name: "businessName", placeholder: "Enter business name", maxLength: 150 })}
           {renderField({ label: "Store Name", name: "storeName", placeholder: "Enter store name", maxLength: 100 })}
           {renderField({ label: "Business Category", name: "storeType", required: true, placeholder: "Enter business category", maxLength: 100 })}

@@ -70,6 +70,9 @@ export const deleteProduct = (id) =>
 export const updateProductStatus = (id, isActive) =>
   api.patch(`/products/${id}/status`, { isActive }).then((res) => { invalidateCachedRequests("products:"); return res.data; });
 
+export const bulkAddStock = (updates) =>
+  api.patch("/products/bulk-stock", { updates }).then((res) => { invalidateCachedRequests("products:"); return res.data; });
+
 
 
 

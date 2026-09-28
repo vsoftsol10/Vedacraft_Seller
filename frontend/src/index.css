@@ -12,6 +12,17 @@
 .offers-page th:nth-child(3) { width: 33%; }
 .offers-page th:nth-child(4) { width: 22%; }
 
+/* Keep the offers list compact without changing its desktop column layout. */
+.offers-page table th {
+  padding-top: 9px !important;
+  padding-bottom: 9px !important;
+}
+
+.offers-page table td {
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+}
+
 /* Header-only new-order celebration. The Leaf component can later be replaced by
    an image in App.jsx without changing these positioning or motion rules. */
 .order-celebration-leaf,
@@ -140,8 +151,11 @@
 
   body {
     margin: 0;
+    min-width: 0;
     font-family: "Segoe UI", Roboto, Arial, sans-serif;
     background: var(--color-canvas);
     color: #1f2937;
   }
+
+  #root { min-width: 0; }
 }

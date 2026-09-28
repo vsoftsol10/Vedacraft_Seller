@@ -20,8 +20,8 @@ export default function OrderTrendsChart() {
   const { data, isLoading, isError } = useInsightQuery(() => fetchOrderTrends(year), [year]);
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5">
-      <div className="mb-4 flex items-center justify-between">
+    <div className="rounded-xl border border-gray-200 bg-white p-3 sm:p-5">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-base font-semibold text-gray-900">Order Trends</h2>
         <select
           value={year}
@@ -35,7 +35,7 @@ export default function OrderTrendsChart() {
           ))}
         </select>
       </div>
-      <div className="h-80 w-full">
+      <div className="h-60 w-full sm:h-80">
         {isLoading && (
           <div className="h-full w-full animate-pulse rounded-lg bg-gray-50" />
         )}

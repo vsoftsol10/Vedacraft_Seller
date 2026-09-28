@@ -7,14 +7,14 @@ import { getProducts } from "../api/productapi";
 const apiError = (error, fallback) => error?.response?.data?.message || (error?.request && !error?.response ? "Cannot reach the server. Check your connection and try again." : null) || fallback;
 
 function ToggleSwitch({ checked, onChange, disabled }) {
-  return <button type="button" role="switch" aria-checked={checked} aria-label={checked ? "Disable offer" : "Enable offer"} title={disabled ? "Expired offers can't be toggled" : undefined} onClick={onChange} disabled={disabled} className={`relative h-9 w-[66px] shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${checked ? "bg-[#4f9d5d]" : "bg-[#d1d5db]"}`}><span className={`absolute top-1.5 h-6 w-6 rounded-full bg-white shadow-sm transition-transform ${checked ? "translate-x-9" : "translate-x-1.5"}`} /></button>;
+  return <button type="button" role="switch" aria-checked={checked} aria-label={checked ? "Disable offer" : "Enable offer"} title={disabled ? "Expired offers can't be toggled" : undefined} onClick={onChange} disabled={disabled} className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${checked ? "bg-[#4f9d5d]" : "bg-[#d1d5db]"}`}><span className={`absolute left-1 top-1 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${checked ? "translate-x-5" : "translate-x-0"}`} /></button>;
 }
 
 function OfferStatus({ offer, onChange, disabled }) {
   const isExpired = offer.status === "Expired";
   const label = isExpired ? "Expired" : offer.isActive ? "Active" : "Inactive";
   const labelColor = isExpired ? "text-red-700" : offer.isActive ? "text-[#16803c]" : "text-gray-600";
-  return <div className="flex items-center gap-3"><ToggleSwitch checked={Boolean(offer.isActive)} onChange={onChange} disabled={disabled || isExpired} /><span className={`text-base font-medium ${labelColor}`}>{label}</span></div>;
+  return <div className="flex items-center gap-2"><ToggleSwitch checked={Boolean(offer.isActive)} onChange={onChange} disabled={disabled || isExpired} /><span className={`text-sm font-medium ${labelColor}`}>{label}</span></div>;
 }
 
 function ProductsCell({ offer, productsById, productsLoaded, isOpen, onToggle, popoverRef }) {

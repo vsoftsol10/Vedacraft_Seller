@@ -3,23 +3,23 @@ import useInsightQuery from "./useInsightQuery";
 
 function ProductRow({ name, orders, image }) {
   return (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-3">
+    <div className="flex flex-wrap items-center justify-between gap-2 lg:flex-nowrap lg:gap-0">
+      <div className="flex min-w-0 items-center gap-3 lg:min-w-[auto]">
         <img
           src={image || "/images/placeholder-product.jpg"}
           alt={name}
           className="h-10 w-10 shrink-0 rounded-md object-cover"
         />
-        <p className="text-sm font-medium text-gray-900">{name}</p>
+        <p className="min-w-0 break-words text-sm font-medium text-gray-900 lg:min-w-[auto] lg:break-normal">{name}</p>
       </div>
-      <p className="text-sm font-medium text-gray-900">{orders} orders</p>
+      <p className="shrink-0 text-sm font-medium text-gray-900">{orders} orders</p>
     </div>
   );
 }
 
 function ProductRowSkeleton() {
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex flex-wrap items-center justify-between gap-2 lg:flex-nowrap lg:gap-0">
       <div className="flex items-center gap-3">
         <div className="h-10 w-10 shrink-0 animate-pulse rounded-md bg-gray-100" />
         <div className="h-3 w-24 animate-pulse rounded bg-gray-100" />

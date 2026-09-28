@@ -9,9 +9,9 @@ function TipRow({ title, description, image }) {
         alt={title}
         className="h-10 w-10 shrink-0 rounded-md object-cover"
       />
-      <div>
-        <p className="text-sm font-medium text-gray-900">{title}</p>
-        <p className="text-sm text-gray-500">{description}</p>
+      <div className="min-w-0 lg:min-w-[auto]">
+        <p className="break-words text-sm font-medium text-gray-900 lg:break-normal">{title}</p>
+        <p className="break-words text-sm text-gray-500 lg:break-normal">{description}</p>
       </div>
     </div>
   );

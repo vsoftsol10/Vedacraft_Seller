@@ -134,7 +134,7 @@ export default function SellingLocation() {
   return (
     <div className="flex max-w-[1100px] flex-col gap-5 pb-8 pt-2">
       <header>
-        <h1 className="m-0 text-[32px] font-bold text-gray-900">Selling Location</h1>
+        <h1 className="m-0 text-[26px] font-bold text-gray-900 sm:text-[32px]">Selling Location</h1>
         <p className="mb-0 mt-1.5 text-[15px] text-gray-800">Choose the states and cities where you want to sell your products.</p>
       </header>
 
@@ -208,22 +208,22 @@ export default function SellingLocation() {
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
           onMouseDown={(event) => event.target === event.currentTarget && closeModal()}
         >
-          <div role="dialog" aria-modal="true" className="flex max-h-[90vh] w-[440px] max-w-full flex-col rounded-xl border border-gray-300 bg-white">
+          <div role="dialog" aria-modal="true" className="flex max-h-[calc(100dvh-2rem)] w-full max-w-[440px] flex-col rounded-xl border border-gray-300 bg-white md:max-h-[90vh]">
             <div className="flex items-start justify-between border-b border-gray-300 px-2.5 pb-2 pt-3">
               <div className="flex items-start gap-2">
                 {step === 2 && (
-                  <button type="button" onClick={() => setStep(1)} aria-label="Back" className="mt-0.5 cursor-pointer border-0 bg-transparent p-0 text-gray-900">
+                  <button type="button" onClick={() => setStep(1)} aria-label="Back" className="mt-0.5 grid h-10 w-10 shrink-0 cursor-pointer place-items-center border-0 bg-transparent p-0 text-gray-900 sm:h-auto sm:w-auto">
                     <ChevronLeft size={20} />
                   </button>
                 )}
                 <div>
-                  <h3 className="m-0 text-lg font-semibold text-gray-900">
+                  <h3 className="m-0 text-base font-semibold text-gray-900 sm:text-lg">
                     {step === 1 ? "Select State" : `Select City${activeState ? ` · ${activeState}` : ""}`}
                   </h3>
                   <p className="m-0 text-sm text-gray-900">Step {step} of 2</p>
                 </div>
               </div>
-              <button type="button" onClick={closeModal} aria-label="Close" className="cursor-pointer border-0 bg-transparent p-1 text-gray-900">
+              <button type="button" onClick={closeModal} aria-label="Close" className="grid h-10 w-10 shrink-0 cursor-pointer place-items-center border-0 bg-transparent p-1 text-gray-900 sm:h-auto sm:w-auto">
                 <X size={16} />
               </button>
             </div>
@@ -249,7 +249,7 @@ export default function SellingLocation() {
                           <button
                             type="button"
                             onClick={() => pickState(name)}
-                            className="flex w-full cursor-pointer items-center justify-between border-0 bg-transparent px-0 py-[5px] text-left text-[15px] text-gray-900 hover:bg-amber-50"
+                            className="flex w-full cursor-pointer items-center justify-between border-0 bg-transparent px-0 py-2 text-left text-[15px] text-gray-900 hover:bg-amber-50 sm:py-[5px]"
                           >
                             {name}
                             <ChevronRight size={14} />
@@ -282,11 +282,11 @@ export default function SellingLocation() {
               </div>
 
               {step === 2 && (
-                <div className="mt-3 flex justify-end gap-4">
+                <div className="mt-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-4">
                   <button
                     type="button"
                     onClick={closeModal}
-                    className="h-10 w-[150px] cursor-pointer rounded border border-gray-900 bg-white text-base text-gray-900"
+                    className="h-10 w-full cursor-pointer rounded border border-gray-900 bg-white text-base text-gray-900 sm:w-[150px]"
                   >
                     Cancel
                   </button>
@@ -294,7 +294,7 @@ export default function SellingLocation() {
                     type="button"
                     onClick={saveModal}
                     disabled={!selectedCities.length || saving}
-                    className="h-10 w-[150px] cursor-pointer rounded border border-green-700 bg-green-700 text-base text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    className="h-10 w-full cursor-pointer rounded border border-green-700 bg-green-700 text-base text-white disabled:cursor-not-allowed disabled:opacity-50 sm:w-[150px]"
                   >
                     {saving ? "Saving..." : "Save"}
                   </button>

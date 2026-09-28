@@ -35,12 +35,12 @@ export default function Dashboard() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Good Morning, {sellerName}</h1>
-        <p className="mt-1 text-xl text-gray-900">Here&apos;s what&apos;s happening with your store today</p>
+        <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Good Morning, {sellerName}</h1>
+        <p className="mt-1 text-base text-gray-900 sm:text-xl">Here&apos;s what&apos;s happening with your store today</p>
       </div>
       <h2 className="mb-5 text-2xl font-bold text-gray-900">Dashboard</h2>
       {error && <p className="mb-5 rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</p>}
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <StatCard icon={IndianRupee} label="Total Revenue" value={stats ? money(stats.totalRevenue) : "—"} change={stats?.revenueChange} iconBg="bg-emerald-50" iconColor="text-emerald-600" />
         <StatCard icon={ShoppingBag} label="Total Orders" value={stats?.totalOrders ?? "—"} change={stats?.ordersChange} iconBg="bg-amber-50" iconColor="text-amber-600" />
         <StatCard icon={Package} label="Total Products" value={stats?.totalProducts ?? "—"} iconBg="bg-emerald-50" iconColor="text-emerald-600" />

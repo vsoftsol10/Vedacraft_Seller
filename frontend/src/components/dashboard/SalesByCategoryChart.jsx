@@ -1,3 +1,81 @@
+// import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
+// const colors = ["#4f3edc", "#ff7a08", "#51a622", "#ffb34d"];
+// export default function SalesByCategoryChart({ data }) { const chartData = data.map((item, index) => ({ ...item, color: colors[index % colors.length] })); return <section className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+//     <div className="mb-1 flex items-center justify-between">
+//         <h3 className="font-semibold text-gray-900">Sales by Category</h3>
+//         <span className="rounded-md border border-gray-200 px-2 py-1 text-sm text-gray-400">All time</span>
+//         </div>
+//         <p className="mb-4 text-xs text-gray-700">Revenue distribution</p>
+//         {chartData.length ? <div className="flex flex-col items-center gap-5 sm:flex-row sm:gap-6">
+//             <ResponsiveContainer width={190} height={190}>
+//                 <PieChart>
+//                     <Pie data={chartData} dataKey="value" innerRadius={32} outerRadius={82} startAngle={90} endAngle={450}>{chartData.map((item) => <Cell key={item.name} fill={item.color} stroke="none" />)}</Pie>
+//                     </PieChart>
+//                     </ResponsiveContainer>
+//                     <ul className="w-full space-y-3 sm:w-52">{chartData.map((item) => <li key={item.name} className="flex items-center gap-2 text-sm">
+//                     <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+//                     <span className="text-gray-900">{item.name}</span>
+//                     <span className="ml-auto font-medium text-gray-900">{item.percent}%</span>
+//                     </li>)}</ul>
+//                     </div> : <p className="py-16 text-center text-sm text-gray-500">No sales yet</p>}</section>; }
+
+import { useMemo, useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
+
 const colors = ["#4f3edc", "#ff7a08", "#51a622", "#ffb34d"];
-export default function SalesByCategoryChart({ data }) { const chartData = data.map((item, index) => ({ ...item, color: colors[index % colors.length] })); return <section className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm"><div className="mb-1 flex items-center justify-between"><h3 className="font-semibold text-gray-900">Sales by Category</h3><span className="rounded-md border border-gray-200 px-2 py-1 text-sm text-gray-400">All time</span></div><p className="mb-4 text-xs text-gray-700">Revenue distribution</p>{chartData.length ? <div className="flex flex-col items-center gap-5 sm:flex-row sm:gap-6"><ResponsiveContainer width={190} height={190}><PieChart><Pie data={chartData} dataKey="value" innerRadius={32} outerRadius={82} startAngle={90} endAngle={450}>{chartData.map((item) => <Cell key={item.name} fill={item.color} stroke="none" />)}</Pie></PieChart></ResponsiveContainer><ul className="w-full space-y-3 sm:w-52">{chartData.map((item) => <li key={item.name} className="flex items-center gap-2 text-sm"><span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} /><span className="text-gray-900">{item.name}</span><span className="ml-auto font-medium text-gray-900">{item.percent}%</span></li>)}</ul></div> : <p className="py-16 text-center text-sm text-gray-500">No sales yet</p>}</section>; }
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+// data shape: { Jan: [{ name, value, percent }, ...], Feb: [...], ... }
+export default function SalesByCategoryChart({ data }) {
+  const currentMonth = MONTHS[new Date().getMonth()];
+  const [month, setMonth] = useState(currentMonth);
+
+  const chartData = useMemo(() => {
+    const rows = data?.[month] ?? [];
+    return rows.map((item, index) => ({ ...item, color: colors[index % colors.length] }));
+  }, [data, month]);
+
+  return (
+    <section className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+      <div className="mb-1 flex items-center justify-between">
+        <h3 className="font-semibold text-gray-900">Sales by Category</h3>
+        <select
+          value={month}
+          onChange={(e) => setMonth(e.target.value)}
+          className="rounded-md border border-gray-200 px-2 py-1 text-sm text-gray-500"
+        >
+          {MONTHS.map((m) => (
+            <option key={m} value={m}>
+              {m === currentMonth ? `${m} (This Month)` : m}
+            </option>
+          ))}
+        </select>
+      </div>
+      <p className="mb-4 text-xs text-gray-700">Revenue distribution</p>
+      {chartData.length ? (
+        <div className="flex flex-col items-center gap-5 sm:flex-row sm:gap-6">
+          <ResponsiveContainer width={190} height={190}>
+            <PieChart>
+              <Pie data={chartData} dataKey="value" innerRadius={32} outerRadius={82} startAngle={90} endAngle={450}>
+                {chartData.map((item) => (
+                  <Cell key={item.name} fill={item.color} stroke="none" />
+                ))}
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+          <ul className="w-full space-y-3 sm:w-52">
+            {chartData.map((item) => (
+              <li key={item.name} className="flex items-center gap-2 text-sm">
+                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                <span className="text-gray-900">{item.name}</span>
+                <span className="ml-auto font-medium text-gray-900">{item.percent}%</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <p className="py-16 text-center text-sm text-gray-500">No sales yet</p>
+      )}
+    </section>
+  );
+}

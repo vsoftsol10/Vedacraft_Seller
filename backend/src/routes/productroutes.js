@@ -26,6 +26,7 @@ import {
   getProductStats,
   updateProduct,
   updateProductStatus,
+  bulkAddStock,
   bulkPreviewProducts,
   bulkConfirmProducts,
   downloadBulkTemplate,
@@ -39,6 +40,7 @@ router.use(requireSeller);
 router.get("/stats", getProductStats);
 router.get("/categories", getProductCategories);
 router.get("/bulk-template", downloadBulkTemplate);
+router.patch("/bulk-stock", bulkAddStock);
 router.get("/", getProducts);
 router.get("/:id", getProductById);
 router.post("/", productImageUpload, createProduct);

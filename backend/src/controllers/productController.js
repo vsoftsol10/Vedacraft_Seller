@@ -230,6 +230,36 @@ export const updateProductStatus = async (req, res, next) => {
     return res.json({ success: true, data: toApiProduct(data) });
   } catch (error) { return next(error); }
 };
+
+export const bulkAddStock = async (req, res, next) => {
+  try {
+    const updates = Array.isArray(req.body?.updates) ? req.body.updates : [];
+    if (!updates.length) return res.status(400).json({ success: false, message: "Select at least one product and enter a quantity." });
+
+    const result = [];
+    for (const update of updates) {
+      const quantity = Number(update.quantity);
+      if (!update.id || !Number.isInteger(quantity) || quantity <= 0) {
+        return res.status(400).json({ success: false, message: "Each stock quantity must be a whole number greater than zero." });
+      }
+      const { data: existing, error: findError } = await supabase
+        .from(table).select("*").eq("id", update.id).eq("seller_id", req.seller.id).maybeSingle();
+      if (findError) throw findError;
+      if (!existing) return res.status(404).json({ success: false, message: "One of the selected products was not found." });
+
+      const stockQuantity = Number(existing.stock_quantity || 0) + quantity;
+      const { data, error } = await supabase
+        .from(table)
+        .update({ stock_quantity: stockQuantity, stock_status: stockStatusFor(stockQuantity, existing.low_stock_alert) })
+        .eq("id", existing.id)
+        .select()
+        .single();
+      if (error) throw error;
+      result.push(toApiProduct(data));
+    }
+    return res.json({ success: true, data: result });
+  } catch (error) { return next(error); }
+};
 export const deleteProduct = async (req, res, next) => {
   try {
     const { data: product, error: productError } = await supabase.from(table).select("id, cover_image, additional_images").eq("id", req.params.id).eq("seller_id", req.seller.id).maybeSingle();

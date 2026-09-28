@@ -152,7 +152,8 @@ export default function Order() {
         if (!active) return;
         const mappedOrders = records.map((record) => {
           const items = parseJson(record.items, []);
-          const item = Array.isArray(items) ? items[0] ?? {} : {};
+          const orderItems = Array.isArray(items) ? items : [];
+          const item = orderItems[0] ?? {};
           const address = parseJson(record.address, {});
           return {
             rawId: record.id ?? record.idx,
@@ -168,6 +169,15 @@ export default function Order() {
             payment: String(record.payment_method || "—").toUpperCase() === "COD" ? "Cash On Delivery" : record.payment_method || "—",
             date: formatDate(record.created_at),
             image: imageUrl(item.image),
+            orderItems: orderItems.map((orderItem) => ({
+              name: orderItem.name || orderItem.product_name || "Product",
+              quantity: Number(orderItem.quantity) || 1,
+              price: orderItem.price ?? orderItem.selling_price ?? orderItem.discountPrice ?? null,
+              image: imageUrl(orderItem.image),
+              sku: orderItem.sku || orderItem.productId || orderItem.id || "",
+            })),
+            total: Number(record.total) || 0,
+            createdAt: record.created_at,
           };
         });
         setOrders(mappedOrders);
@@ -191,12 +201,20 @@ export default function Order() {
   ];
 
   const filteredOrders = orders
-    .filter((order) =>
-      [order.id, order.customer, order.product]
-        .join(" ")
-        .toLowerCase()
-        .includes(query.toLowerCase())
-    )
+    .filter((order) => {
+      const searchTerm = query.trim().toLowerCase();
+      if (!searchTerm) return true;
+
+      return [
+        order.id,
+        order.customer,
+        order.product,
+        order.amount,
+        order.status,
+        order.payment,
+        order.date,
+      ].some((value) => String(value ?? "").toLowerCase().includes(searchTerm));
+    })
     .filter((order) => statusFilter === "all" || String(order.status).toLowerCase() === statusFilter)
     .sort((a, b) => {
       if (sortBy === "none") return 0;
@@ -233,7 +251,7 @@ export default function Order() {
         <p className="mb-0 mt-1 text-[#6b7280]">Manage customer orders and track deliveries</p>
       </div>
 
-      <div className="flex flex-wrap gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:flex lg:flex-wrap lg:gap-4">
         {statCards.map(({ key, ...card }) => (
           <OrderStatCard key={key} {...card} />
         ))}
