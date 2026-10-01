@@ -7,7 +7,7 @@ const EDITABLE_TAX_IDS = false;
 const PAN_PATTERN = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 
-const profileFields = "id, status, business_name, store_name, store_type, store_description, pan_number, gst_number";
+const profileFields = "id, status, full_name, business_name, store_name, store_type, store_description, pan_number, gst_number, address_line1, city, state, pin_code, country";
 
 const toBusiness = (seller) => ({
   businessName: seller.business_name || "",
@@ -16,6 +16,11 @@ const toBusiness = (seller) => ({
   storeDescription: seller.store_description || "",
   panNumber: seller.pan_number || "",
   gstNumber: seller.gst_number || "",
+  address1: seller.address_line1 || "",
+  city: seller.city || "",
+  state: seller.state || "",
+  pinCode: seller.pin_code || "",
+  country: seller.country || "India",
 });
 
 const normaliseText = (value) => String(value).trim().replace(/\s+/g, " ");
@@ -112,6 +117,11 @@ export const updateBusiness = async (req, res) => {
     addTextField(body, "storeName", "store_name", 2, 100, errors, payload);
     addTextField(body, "storeType", "store_type", 2, 100, errors, payload, { allowEmpty: true });
     addTextField(body, "storeDescription", "store_description", 0, 1000, errors, payload, { allowEmpty: true });
+    addTextField(body, "address1", "address_line1", 2, 300, errors, payload);
+    addTextField(body, "city", "city", 2, 100, errors, payload);
+    addTextField(body, "state", "state", 2, 100, errors, payload);
+    addTextField(body, "pinCode", "pin_code", 3, 12, errors, payload);
+    addTextField(body, "country", "country", 2, 100, errors, payload);
     await validateTaxIdsWhenEnabled(body, seller.id, errors, payload);
 
     if (Object.keys(errors).length) return res.status(400).json({ success: false, message: "Please correct the highlighted fields.", errors });

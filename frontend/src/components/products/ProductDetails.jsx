@@ -184,7 +184,7 @@ export default function ProductDetails({ product, onClose }) {
               <Detail label="Quantity" value={product.weight} />
               <Detail label="Description" value={product.description} full />
               <Detail label="Benefits" value={product.benefits} full />
-              <Detail label="Highlights" value={product.highlights} full />
+              <ListDetail label="Highlights" value={product.highlights} />
             </Section>
             <Section title="Dimensions">
               <Detail label="Length" value={dimensions.length} />
@@ -203,8 +203,8 @@ export default function ProductDetails({ product, onClose }) {
               <Detail label="Stock status" value={product.stockStatus} />
             </Section>
             <Section title="Usage & care">
-              <Detail label="How to use" value={usage.howToUse} />
-              <Detail label="Care instruction" value={usage.careInstruction} />
+              <ListDetail label="How to use" value={usage.howToUse} numbered />
+              <ListDetail label="Care instruction" value={usage.careInstruction} />
             </Section>
           </div>
         </div>
@@ -229,4 +229,18 @@ function Detail({ label, value, full = false }) {
       <strong className={ITEM_VALUE}>{shown(value)}</strong>
     </div>
   );
+}
+
+function ListDetail({ label, value, numbered = false }) {
+  const entries = listEntries(value);
+  return <div className={`${ITEM} col-span-full`}><span className={ITEM_LABEL}>{label}</span>{entries.length ? <ol className={`${ITEM_VALUE} m-0 list-inside ${numbered ? "list-decimal" : "list-disc"}`}>{entries.map((entry, index) => <li key={`${entry}-${index}`}>{entry}</li>)}</ol> : <strong className={ITEM_VALUE}>â€”</strong>}</div>;
+}
+
+function listEntries(value) {
+  if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) return parsed.map((item) => String(item).trim()).filter(Boolean);
+  } catch { /* legacy plain text */ }
+  return String(value ?? "").split(/\r?\n|;/).map((item) => item.trim()).filter(Boolean);
 }

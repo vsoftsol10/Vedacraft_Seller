@@ -10,6 +10,11 @@ export async function saveBusiness(values) {
     storeName: values.storeName,
     storeType: values.storeType,
     storeDescription: values.storeDescription,
+    address1: values.address1,
+    city: values.city,
+    state: values.state,
+    pinCode: values.pinCode,
+    country: values.country,
   };
   if (values.businessName) payload.businessName = values.businessName;
   const { data } = await client.put('/business', payload);

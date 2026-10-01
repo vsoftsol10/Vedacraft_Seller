@@ -155,6 +155,7 @@ export default function Order() {
           const orderItems = Array.isArray(items) ? items : [];
           const item = orderItems[0] ?? {};
           const address = parseJson(record.address, {});
+          const returnAddress = record.return_address || {};
           return {
             rawId: record.id ?? record.idx,
             // The order number identifies the purchase; a product slug identifies only its item.
@@ -162,6 +163,10 @@ export default function Order() {
             customer: address.fullName || "Customer",
             phone: address.phoneNumber,
             address: [address.address, address.landmark, address.city, address.state, address.pincode].filter(Boolean).join(", "),
+            returnAddress: {
+              name: returnAddress.name || "Seller",
+              address: [returnAddress.address1, returnAddress.city, returnAddress.state, returnAddress.pinCode, returnAddress.country].filter(Boolean).join(", "),
+            },
             product: record.product || item.name || "Product",
             items: record.item_count ?? item.quantity ?? 0,
             amount: formatMoney(record.total),

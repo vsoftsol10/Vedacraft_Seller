@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { FileText, Pencil, Plus, Upload, X } from "lucide-react";
 import { getSellerDocuments, uploadSellerDocument } from "../api/productapi";
 
-const TYPES = ["PAN Card", "GST Certificate", "Bank Account Proof", "Business Registration", "MFC Certificate", "Supporting Document"];
+const TYPES = ["PAN Card", "GST Certificate", "Bank Account Proof", "Business Registration", "Supporting Document"];
 
 export default function Documents() {
   const [documents, setDocuments] = useState([]);

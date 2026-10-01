@@ -31,15 +31,35 @@ import { supabase } from "../config/supabase.js";
 import { getSellerOrders, matchedSellerItems } from "../services/sellerOrders.js";
 
 const ordersTable = "orders";
+const sellersTable = "seller_applications";
 
-const EDITABLE_STATUSES = ["Processing", "Packed", "Shipped", "Delivered"];
+const ORDER_STATUS_SEQUENCE = ["Placed", "Processing", "Packed", "Shipped", "Delivered"];
+const EDITABLE_STATUSES = ORDER_STATUS_SEQUENCE.slice(1);
+
+const canonicalStatus = (value) => {
+  const normalized = String(value ?? "Placed").trim().toLowerCase();
+  return ORDER_STATUS_SEQUENCE.find((candidate) => candidate.toLowerCase() === normalized) ?? null;
+};
 
 export const getOrders = async (req, res, next) => {
   try {
     // Orders store product snapshots in `items`. Match those product IDs to the
     // signed-in seller's products so a seller only receives their own orders.
-    const { orders } = await getSellerOrders(req.seller.id);
-    return res.json({ success: true, data: orders });
+    const [{ orders }, { data: seller, error: sellerError }] = await Promise.all([
+      getSellerOrders(req.seller.id),
+      supabase.from(sellersTable).select("full_name, business_name, store_name, address_line1, city, state, pin_code, country").eq("id", req.seller.id).maybeSingle(),
+    ]);
+    if (sellerError) throw sellerError;
+
+    const returnAddress = seller ? {
+      name: seller.store_name || seller.business_name || seller.full_name || "Seller",
+      address1: seller.address_line1 || "",
+      city: seller.city || "",
+      state: seller.state || "",
+      pinCode: seller.pin_code || "",
+      country: seller.country || "",
+    } : null;
+    return res.json({ success: true, data: orders.map((order) => ({ ...order, return_address: returnAddress })) });
   } catch (error) {
     return next(error);
   }
@@ -63,6 +83,20 @@ export const updateOrderStatus = async (req, res, next) => {
 
     const owned = matchedSellerItems(order, productIds).length > 0;
     if (!owned) return res.status(404).json({ success: false, message: "Order not found" });
+
+    const currentStatus = canonicalStatus(order.status);
+    const requestedIndex = ORDER_STATUS_SEQUENCE.indexOf(status);
+    const currentIndex = ORDER_STATUS_SEQUENCE.indexOf(currentStatus);
+    if (currentIndex === -1) {
+      return res.status(409).json({ success: false, message: "This order has an unsupported status and cannot be updated." });
+    }
+    if (requestedIndex !== currentIndex + 1) {
+      const nextStatus = ORDER_STATUS_SEQUENCE[currentIndex + 1];
+      const message = nextStatus
+        ? `Order status can only move forward from ${currentStatus} to ${nextStatus}.`
+        : "Delivered orders cannot be updated further.";
+      return res.status(409).json({ success: false, message });
+    }
 
     const updates = { status };
     // Record the first time the seller marks an order as delivered. Do not

@@ -10,6 +10,7 @@ const toProfile = (seller) => ({
   mobileNumber: seller.mobile_number || "",
   alternateNumber: seller.alternate_number || "",
   profileImage: seller.profile_image || null,
+  isSellingActive: seller.is_selling_active !== false,
 });
 
 const normaliseIndianMobile = (value) => {
@@ -26,7 +27,7 @@ const imageTypeFromMagicBytes = (buffer) => {
 };
 
 const findSeller = async (sellerId) => {
-  const { data, error } = await supabase.from(table).select("id, full_name, business_email, mobile_number, alternate_number, profile_image, updated_at").eq("id", sellerId).maybeSingle();
+  const { data, error } = await supabase.from(table).select("id, full_name, business_email, mobile_number, alternate_number, profile_image, is_selling_active, updated_at").eq("id", sellerId).maybeSingle();
   if (error) throw error;
   return data;
 };
@@ -42,6 +43,30 @@ export const getProfile = async (req, res) => {
   }
 };
 
+// Kept separate from the full profile form so store availability changes take
+// effect immediately and never depend on unrelated profile fields being valid.
+export const updateSellingStatus = async (req, res) => {
+  try {
+    if (typeof req.body?.isSellingActive !== "boolean") {
+      return res.status(400).json({ success: false, message: "Selling status must be true or false." });
+    }
+
+    const { data, error } = await supabase
+      .from(table)
+      .update({ is_selling_active: req.body.isSellingActive, updated_at: new Date().toISOString() })
+      .eq("id", req.seller.id)
+      .select("is_selling_active")
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ success: false, message: "No seller profile is linked to this account." });
+
+    return res.json({ success: true, data: { isSellingActive: data.is_selling_active } });
+  } catch (error) {
+    console.error("Unable to update seller selling status:", error);
+    return res.status(500).json({ success: false, message: "Unable to update selling status. Please try again." });
+  }
+};
+
 export const updateProfile = async (req, res) => {
   let uploadedImage;
   try {
@@ -53,6 +78,7 @@ export const updateProfile = async (req, res) => {
     const mobileNumber = normaliseIndianMobile(req.body?.mobileNumber);
     const alternateRaw = String(req.body?.alternateNumber ?? "").trim();
     const alternateNumber = alternateRaw ? normaliseIndianMobile(alternateRaw) : "";
+    const sellingStatus = req.body?.isSellingActive;
     const errors = {};
 
     if (fullName.length < 2 || fullName.length > 100) errors.fullName = "Full name must be between 2 and 100 characters.";
@@ -60,6 +86,7 @@ export const updateProfile = async (req, res) => {
     if (!mobileNumber) errors.mobileNumber = "Enter a valid 10-digit Indian mobile number.";
     if (alternateRaw && !alternateNumber) errors.alternateNumber = "Enter a valid 10-digit Indian mobile number.";
     if (mobileNumber && alternateNumber && mobileNumber === alternateNumber) errors.alternateNumber = "Alternate number must be different from your mobile number.";
+    if (sellingStatus !== undefined && sellingStatus !== "true" && sellingStatus !== "false") errors.isSellingActive = "Choose whether your store is accepting new orders.";
     if (req.file && !imageTypeFromMagicBytes(req.file.buffer)) errors.profileImage = "Only valid PNG and JPEG images are allowed.";
     if (Object.keys(errors).length) return res.status(400).json({ success: false, message: "Please correct the highlighted fields.", errors });
 
@@ -72,6 +99,9 @@ export const updateProfile = async (req, res) => {
       business_email: email,
       mobile_number: mobileNumber,
       alternate_number: alternateNumber || null,
+      // Multipart form fields arrive as strings. An omitted field preserves
+      // compatibility with older clients instead of changing the status.
+      ...(sellingStatus === undefined ? {} : { is_selling_active: sellingStatus === "true" }),
       updated_at: new Date().toISOString(),
     };
     const oldImagePath = profileImagePathFromUrl(seller.profile_image, seller.id);
@@ -87,7 +117,7 @@ export const updateProfile = async (req, res) => {
       payload.profile_image = null;
     }
 
-    const { data: updated, error: updateError } = await supabase.from(table).update(payload).eq("id", seller.id).select("id, full_name, business_email, mobile_number, alternate_number, profile_image").single();
+    const { data: updated, error: updateError } = await supabase.from(table).update(payload).eq("id", seller.id).select("id, full_name, business_email, mobile_number, alternate_number, profile_image, is_selling_active").single();
     if (updateError) {
       if (uploadedImage) await removeProfileImage(uploadedImage.path, seller.id);
       throw updateError;

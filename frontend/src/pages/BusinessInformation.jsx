@@ -21,7 +21,7 @@ const EMPTY = {
 const BUSINESS_TYPES = ["Individual", "Registered Business"];
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg"];
-const SAVED_FIELDS = ["businessName", "storeName", "storeType", "storeDescription", "gstNumber", "panNumber"];
+const SAVED_FIELDS = ["businessName", "storeName", "storeType", "storeDescription", "gstNumber", "panNumber", "address1", "city", "state", "pinCode", "country"];
 
 const inputBase =
   "rounded-md border bg-white px-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-amber-400 focus:outline-none focus:ring-4 focus:ring-amber-400/25 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500";
@@ -38,6 +38,11 @@ function validate(values) {
   if (storeName && (storeName.length < 2 || storeName.length > 100)) errors.storeName = "Store name must be 2-100 characters.";
   if (storeType && (storeType.length < 2 || storeType.length > 100)) errors.storeType = "Business category must be 2-100 characters when provided.";
   if (String(values.storeDescription ?? "").length > 1000) errors.storeDescription = "Description can be up to 1000 characters.";
+  if (clean(values.address1).length < 2 || clean(values.address1).length > 300) errors.address1 = "Address must be 2-300 characters.";
+  if (clean(values.city).length < 2 || clean(values.city).length > 100) errors.city = "City must be 2-100 characters.";
+  if (clean(values.state).length < 2 || clean(values.state).length > 100) errors.state = "State must be 2-100 characters.";
+  if (clean(values.pinCode).length < 3 || clean(values.pinCode).length > 12) errors.pinCode = "Pin code must be 3-12 characters.";
+  if (clean(values.country).length < 2 || clean(values.country).length > 100) errors.country = "Country must be 2-100 characters.";
   return errors;
 }
 
@@ -49,6 +54,11 @@ const toFormValues = (data) => ({
   storeDescription: data?.storeDescription ?? "",
   panNumber: data?.panNumber ?? "",
   gstNumber: data?.gstNumber ?? "",
+  address1: data?.address1 ?? "",
+  city: data?.city ?? "",
+  state: data?.state ?? "",
+  pinCode: data?.pinCode ?? "",
+  country: data?.country ?? "India",
 });
 
 export default function BusinessInformation() {
@@ -147,7 +157,7 @@ export default function BusinessInformation() {
     const found = validate(values);
     setErrors(found);
     if (Object.keys(found).length) {
-      setTouched({ businessName: true, storeName: true, storeType: true, storeDescription: true });
+      setTouched({ businessName: true, storeName: true, storeType: true, storeDescription: true, address1: true, city: true, state: true, pinCode: true, country: true });
       return;
     }
 

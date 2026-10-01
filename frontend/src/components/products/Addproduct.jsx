@@ -455,7 +455,7 @@ const initialState = {
   weightUnit: "kg",
   description: "",
   benefits: "",
-  highlights: "",
+  highlights: ["", "", "", ""],
   length: "",
   width: "",
   height: "",
@@ -465,9 +465,23 @@ const initialState = {
   sku: "",
   stockQuantity: "",
   lowStockAlert: "",
-  howToUse: "",
-  careInstruction: "",
+  howToUse: [""],
+  careInstruction: [""],
 };
+
+// New products are stored as JSON lists. The fallback also keeps products
+// created before this change editable (their text becomes one or more entries).
+const listFromValue = (value, fallbackCount = 1) => {
+  if (Array.isArray(value)) return value.length ? value.map((item) => String(item ?? "")) : Array(fallbackCount).fill("");
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) return parsed.length ? parsed.map((item) => String(item ?? "")) : Array(fallbackCount).fill("");
+  } catch { /* legacy plain text */ }
+  const entries = String(value ?? "").split(/\r?\n|;/).map((item) => item.trim()).filter(Boolean);
+  return entries.length ? entries : Array(fallbackCount).fill("");
+};
+
+const savedList = (values) => JSON.stringify(values.map((value) => String(value).trim()).filter(Boolean));
 
 export default function AddProduct() {
   const navigate = useNavigate();
@@ -489,11 +503,11 @@ export default function AddProduct() {
       setForm({
         productName: product.productName ?? "", category: product.category ?? "", subCategory: product.subCategory ?? "",
         material: product.material ?? "", ...weightFields(product.weight), description: product.description ?? "",
-        benefits: product.benefits ?? "", highlights: product.highlights ?? "", length: product.dimensions?.length ?? "",
+        benefits: product.benefits ?? "", highlights: listFromValue(product.highlights, 4), length: product.dimensions?.length ?? "",
         width: product.dimensions?.width ?? "", height: product.dimensions?.height ?? "", mrp: product.pricing?.mrp ?? "",
         discountPrice: product.pricing?.discountPrice ?? "", sellingPrice: product.pricing?.sellingPrice ?? "", sku: product.inventory?.sku ?? "",
         stockQuantity: product.inventory?.stockQuantity ?? "", lowStockAlert: product.inventory?.lowStockAlert ?? "",
-        howToUse: product.usage?.howToUse ?? "", careInstruction: product.usage?.careInstruction ?? "",
+        howToUse: listFromValue(product.usage?.howToUse), careInstruction: listFromValue(product.usage?.careInstruction),
       });
       setCoverPreview(product.images?.cover ?? null);
       setAdditionalPreviews([...(product.images?.additional ?? []), null, null, null, null].slice(0, 4));
@@ -532,6 +546,16 @@ export default function AddProduct() {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => ({ ...prev, [name]: undefined }));
+  };
+
+  const updateListEntry = (field, index, value) => {
+    setForm((previous) => ({ ...previous, [field]: previous[field].map((entry, entryIndex) => entryIndex === index ? value : entry) }));
+  };
+
+  const addListEntry = (field) => setForm((previous) => ({ ...previous, [field]: [...previous[field], ""] }));
+
+  const removeListEntry = (field, index) => {
+    setForm((previous) => ({ ...previous, [field]: previous[field].length > 1 ? previous[field].filter((_, entryIndex) => entryIndex !== index) : previous[field] }));
   };
 
   const handleCoverChange = (e) => {
@@ -596,7 +620,7 @@ export default function AddProduct() {
 
     const formData = new FormData();
     Object.entries(form).forEach(([key, value]) => {
-      if (key !== "weightUnit") formData.append(key, key === "weight" ? `${value} ${form.weightUnit}`.trim() : value);
+      if (key !== "weightUnit") formData.append(key, key === "weight" ? `${value} ${form.weightUnit}`.trim() : Array.isArray(value) ? savedList(value) : value);
     });
     if (coverImage) formData.append("coverImage", coverImage);
     additionalImages.forEach((file) => {
@@ -684,14 +708,7 @@ export default function AddProduct() {
           </Field>
 
           <Field label="Product Highlights">
-            <textarea
-              className={INPUT}
-              name="highlights"
-              value={form.highlights}
-              onChange={handleChange}
-              placeholder="House no, Building,street,area"
-              rows={3}
-            />
+            <ListEditor values={form.highlights} onChange={(index, value) => updateListEntry("highlights", index, value)} onAdd={() => addListEntry("highlights")} onRemove={(index) => removeListEntry("highlights", index)} placeholder="Enter a product highlight" label="Highlight" />
           </Field>
 
           <h4 className={SUB_HEADING}>Dimensions (Optional)</h4>
@@ -788,10 +805,10 @@ export default function AddProduct() {
           <h3 className={CARD_TITLE}>Usage &amp; Care</h3>
           <div className={GRID_2}>
             <Field label="How To Use">
-              <input className={INPUT} name="howToUse" value={form.howToUse} onChange={handleChange} placeholder="Explain How to use your product" />
+              <ListEditor values={form.howToUse} onChange={(index, value) => updateListEntry("howToUse", index, value)} onAdd={() => addListEntry("howToUse")} onRemove={(index) => removeListEntry("howToUse", index)} placeholder="Describe this step" label="Step" />
             </Field>
             <Field label="Care Instruction">
-              <input className={INPUT} name="careInstruction" value={form.careInstruction} onChange={handleChange} placeholder="Provide care and maintenance instructions" />
+              <ListEditor values={form.careInstruction} onChange={(index, value) => updateListEntry("careInstruction", index, value)} onAdd={() => addListEntry("careInstruction")} onRemove={(index) => removeListEntry("careInstruction", index)} placeholder="Add a care instruction" label="Instruction" />
             </Field>
           </div>
         </section>
@@ -824,4 +841,8 @@ function weightFields(weight = "") {
     weight: match ? match[1].trim() : weight,
     weightUnit: match ? match[2].toLowerCase() : "kg",
   };
+}
+
+function ListEditor({ values, onChange, onAdd, onRemove, placeholder, label }) {
+  return <div className="flex flex-col gap-2">{values.map((value, index) => <div className="flex gap-2" key={index}><input className={INPUT} value={value} onChange={(event) => onChange(index, event.target.value)} placeholder={`${label} ${index + 1}: ${placeholder}`} aria-label={`${label} ${index + 1}`} /><button type="button" onClick={() => onRemove(index)} disabled={values.length === 1} className="shrink-0 rounded-lg border border-[#ddd] px-3 text-xs font-semibold text-[#666] hover:bg-[#f7f7f7] disabled:cursor-not-allowed disabled:opacity-40">Remove</button></div>)}<button type="button" onClick={onAdd} className="w-fit rounded-lg border border-[#4f9d5d] px-3 py-2 text-xs font-semibold text-[#2f7a3c] hover:bg-[#f3faf4]">+ Add {label}</button></div>;
 }

@@ -7,7 +7,6 @@ const documentTypes = {
   gst_certificate: "GST Certificate",
   bank_account_proof: "Bank Account Proof",
   business_registration: "Business Registration",
-  mfc_certificate: "MFC Certificate",
   supporting_document: "Supporting Document",
 };
 
