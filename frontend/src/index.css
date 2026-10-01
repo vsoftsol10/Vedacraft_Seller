@@ -1,16 +1,18 @@
 @import "tailwindcss";
 
-/* Keep the Offers table balanced: text columns receive the flexible space while
-   discount and the status control remain compact. */
+/* Keep the six-column Offers table aligned without pushing Action and Details
+   beyond the scrollable area. */
 .offers-page table {
-  min-width: 680px !important;
+  min-width: 820px !important;
   table-layout: fixed;
 }
 
-.offers-page th:nth-child(1) { width: 29%; }
-.offers-page th:nth-child(2) { width: 16%; }
-.offers-page th:nth-child(3) { width: 33%; }
-.offers-page th:nth-child(4) { width: 22%; }
+.offers-page th:nth-child(1) { width: 22%; }
+.offers-page th:nth-child(2) { width: 12%; }
+.offers-page th:nth-child(3) { width: 24%; }
+.offers-page th:nth-child(4) { width: 13%; }
+.offers-page th:nth-child(5) { width: 15%; }
+.offers-page th:nth-child(6) { width: 14%; }
 
 /* Keep the offers list compact without changing its desktop column layout. */
 .offers-page table th {

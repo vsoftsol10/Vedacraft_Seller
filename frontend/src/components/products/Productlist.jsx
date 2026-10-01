@@ -444,6 +444,7 @@ const GHOST_ACTIVE = "border-[#e5a13b] bg-[#fff8eb] text-[#9b5d08]";
 
 const TOOLBAR_MENU =
   "absolute top-[calc(100%+7px)] right-0 z-10 max-h-[260px] min-w-[180px] overflow-y-auto rounded-[10px] border border-[#e8e8e8] bg-white p-1.5 shadow-[0_10px_28px_rgba(0,0,0,0.12)]";
+const SORT_MENU = "absolute top-[calc(100%+7px)] right-0 z-10 grid w-[360px] grid-cols-2 divide-x divide-[#eee] rounded-[10px] border border-[#e8e8e8] bg-white p-1.5 shadow-[0_10px_28px_rgba(0,0,0,0.12)]";
 const TOOLBAR_MENU_TITLE = "mx-2 mt-[5px] mb-1.5 text-[12px] font-semibold text-[#777]";
 const MENU_ITEM =
   "flex w-full cursor-pointer items-center gap-2 rounded-md border-0 px-2 py-[9px] text-left text-[13px]";
@@ -489,6 +490,7 @@ export default function ProductsList() {
   const [search, setSearch] = useState("");
   const [categories, setCategories] = useState([]);
   const [category, setCategory] = useState("");
+  const [activityStatus, setActivityStatus] = useState("");
   const [stockStatus, setStockStatus] = useState("");
   const [openMenu, setOpenMenu] = useState(null);
   const toolbarRef = useRef(null);
@@ -500,6 +502,7 @@ export default function ProductsList() {
   const [bulkActionOpen, setBulkActionOpen] = useState(false);
   const [quantityUpdateOpen, setQuantityUpdateOpen] = useState(false);
   const bulkActionRef = useRef(null);
+  const searchTimerRef = useRef(null);
 
   const loadData = useCallback(async (filters = {}) => {
     setLoading(true);
@@ -507,6 +510,7 @@ export default function ProductsList() {
       const params = {
         search: filters.search ?? search,
         category: filters.category ?? category,
+        isActive: filters.isActive ?? activityStatus,
         stockStatus: filters.stockStatus ?? stockStatus,
         limit: 100,
       };
@@ -521,7 +525,7 @@ export default function ProductsList() {
     } finally {
       setLoading(false);
     }
-  }, [category, search, stockStatus]);
+  }, [activityStatus, category, search, stockStatus]);
 
   useEffect(() => {
     let cancelled = false;
@@ -534,6 +538,8 @@ export default function ProductsList() {
     loadInitialData();
     return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => () => clearTimeout(searchTimerRef.current), []);
 
   useEffect(() => {
     const closeBulkAction = (event) => {
@@ -566,9 +572,11 @@ export default function ProductsList() {
     };
   }, []);
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    loadData({ search });
+  const handleSearchChange = (e) => {
+    const nextSearch = e.target.value;
+    setSearch(nextSearch);
+    clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => loadData({ search: nextSearch.trim() }), 300);
   };
 
   const handleCategoryChange = (event) => {
@@ -585,10 +593,17 @@ export default function ProductsList() {
     setOpenMenu(null);
   };
 
+  const handleActivityStatusChange = (nextActivityStatus) => {
+    setActivityStatus(nextActivityStatus);
+    loadData({ isActive: nextActivityStatus });
+    setOpenMenu(null);
+  };
+
   const clearFilters = () => {
     setCategory("");
+    setActivityStatus("");
     setStockStatus("");
-    loadData({ category: "", stockStatus: "" });
+    loadData({ category: "", isActive: "", stockStatus: "" });
   };
 
   const handleDelete = async (product) => {
@@ -665,15 +680,15 @@ const handleToggleStatus = async (product) => {
       </div>
 
       <div className={TOOLBAR}>
-        <form className={SEARCH_BOX} onSubmit={handleSearch}>
+        <div className={SEARCH_BOX}>
           <Search size={18} />
           <input
             className={SEARCH_INPUT}
             placeholder="Search"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={handleSearchChange}
           />
-        </form>
+        </div>
         <div className={TOOLBAR_ACTIONS} ref={toolbarRef}>
           <div className="relative">
             <button
@@ -701,31 +716,44 @@ const handleToggleStatus = async (product) => {
           <div className="relative">
             <button
               type="button"
-              className={`${GHOST_BTN} ${stockStatus ? GHOST_ACTIVE : GHOST_IDLE}`}
+              className={`${GHOST_BTN} ${activityStatus || stockStatus ? GHOST_ACTIVE : GHOST_IDLE}`}
               onClick={() => setOpenMenu(openMenu === "stock" ? null : "stock")}
               aria-expanded={openMenu === "stock"}
             >
-              {stockStatus || "Sort by"}
+              {activityStatus ? `${activityStatus[0].toUpperCase()}${activityStatus.slice(1)}` : stockStatus || "Sort by"}
             </button>
             {openMenu === "stock" && (
-              <div className={TOOLBAR_MENU} role="menu" aria-label="Filter by stock status">
-                <p className={TOOLBAR_MENU_TITLE}>Stock status</p>
-                {["", ...STOCK_STATUS_ORDER].map((item) => (
-                  <MenuOption key={item || "all"} selected={stockStatus === item} onClick={() => handleStockStatusChange(item)}>
-                    {item || "All products"}
-                  </MenuOption>
-                ))}
+              <div className={SORT_MENU} role="menu" aria-label="Filter by product and stock status">
+                <div className="pr-1.5">
+                  <p className={TOOLBAR_MENU_TITLE}>Product status</p>
+                  <MenuOption selected={!activityStatus} onClick={() => handleActivityStatusChange("")}>All statuses</MenuOption>
+                  <MenuOption selected={activityStatus === "active"} onClick={() => handleActivityStatusChange("active")}>Active</MenuOption>
+                  <MenuOption selected={activityStatus === "inactive"} onClick={() => handleActivityStatusChange("inactive")}>Inactive</MenuOption>
+                </div>
+                <div className="pl-1.5">
+                  <p className={TOOLBAR_MENU_TITLE}>Stock status</p>
+                  {["", ...STOCK_STATUS_ORDER].map((item) => (
+                    <MenuOption key={item || "all"} selected={stockStatus === item} onClick={() => handleStockStatusChange(item)}>
+                      {item || "All products"}
+                    </MenuOption>
+                  ))}
+                </div>
               </div>
             )}
           </div>
         </div>
       </div>
-      {(category || stockStatus) && (
+      {(category || activityStatus || stockStatus) && (
         <div className={APPLIED_FILTERS} aria-label="Applied filters">
           <span>Applied filters:</span>
           {category && (
             <button type="button" className={FILTER_CHIP} onClick={() => handleCategoryChange("")}>
               Category: {category} <X size={14} />
+            </button>
+          )}
+          {activityStatus && (
+            <button type="button" className={FILTER_CHIP} onClick={() => handleActivityStatusChange("")}>
+              Status: {activityStatus[0].toUpperCase()}{activityStatus.slice(1)} <X size={14} />
             </button>
           )}
           {stockStatus && (

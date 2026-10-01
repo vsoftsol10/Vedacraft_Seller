@@ -404,7 +404,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Plus, Upload } from "lucide-react";
-import { createProduct, getProductById, getProductCategories, updateProduct } from "../../api/productapi";
+import { createProduct, getNextProductSku, getProductById, getProductCategories, updateProduct } from "../../api/productapi";
 import { FORM_ERROR_BANNER } from "../../constants/ui";
 
 /* ---------- Tailwind class constants ---------- */
@@ -425,7 +425,9 @@ const REQUIRED = "text-[#d9534f]";
 const INPUT =
   "w-full rounded-lg border border-[#ddd] bg-white px-3 py-2.5 text-[14px] outline-none focus:border-[#4f9d5d]";
 const WEIGHT_INPUT = `${INPUT} min-w-0 flex-1`;
-const WEIGHT_SELECT = `${INPUT} w-[84px] flex-none`;
+// INPUT includes w-full. Make the unit selector explicitly compact so it does
+// not consume the quantity input's space in the flex row.
+const WEIGHT_SELECT = `${INPUT} !w-[84px] flex-none`;
 const HINT = "text-[11px] text-[#999]";
 const FIELD_ERROR = "text-[11px] text-[#d9534f]";
 
@@ -503,6 +505,28 @@ export default function AddProduct() {
       .then(({ data }) => setCategories(data))
       .catch((err) => setServerError(err?.response?.data?.message || "Unable to load categories"));
   }, []);
+
+  useEffect(() => {
+    if (isEditing || !form.productName.trim()) {
+      if (!isEditing) setForm((current) => current.sku ? { ...current, sku: "" } : current);
+      return undefined;
+    }
+
+    let current = true;
+    const timeout = setTimeout(() => {
+      getNextProductSku(form.productName)
+        .then(({ data }) => {
+          if (current) setForm((previous) => ({ ...previous, sku: data.sku }));
+        })
+        .catch(() => {
+          if (current) setForm((previous) => ({ ...previous, sku: "" }));
+        });
+    }, 300);
+    return () => {
+      current = false;
+      clearTimeout(timeout);
+    };
+  }, [form.productName, isEditing]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -747,8 +771,8 @@ export default function AddProduct() {
           <h3 className={CARD_TITLE}>Inventory</h3>
           <div className={GRID_3}>
             <Field label="SKU">
-              <input className={INPUT} name="sku" value={form.sku} onChange={handleChange} placeholder="Optional SKU" />
-              <span className={HINT}>Stock Keeping Unit</span>
+              <input className={INPUT} name="sku" value={form.sku} onChange={handleChange} placeholder="Generated from product name" readOnly={!isEditing} />
+              <span className={HINT}>{isEditing ? "Stock Keeping Unit" : "Generated automatically: first 3 product-name letters and sequence number"}</span>
             </Field>
             <Field label="Stock Quantity" required error={errors.stockQuantity}>
               <input className={INPUT} name="stockQuantity" type="number" min="0" step="1" value={form.stockQuantity} onChange={handleChange} placeholder="Enter quantity" />

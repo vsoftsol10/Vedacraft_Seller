@@ -8,7 +8,7 @@ const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg'];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_RE = /^[6-9]\d{9}$/;
-const INPUT = "h-[58px] rounded-md border border-[#d9d9d9] bg-white px-3.5 text-[#111] outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-[#b5b5b5] focus-visible:border-[#279a3a] focus-visible:shadow-[0_0_0_3px_rgba(39,154,58,.18)]";
+const INPUT = "h-12 rounded-md border border-[#d9d9d9] bg-white px-3 text-sm text-[#111] outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-[#b5b5b5] focus-visible:border-[#279a3a] focus-visible:shadow-[0_0_0_3px_rgba(39,154,58,.18)]";
 const FIELD_ERROR_INPUT = "border-[#c62828] focus-visible:shadow-[0_0_0_3px_rgba(198,40,40,.16)]";
 
 // Mirrors the backend rules so people get feedback before the request is sent.
@@ -40,8 +40,8 @@ const toFormValues = (data) => ({
 
 function Field({ id, label, optional, error, ...inputProps }) {
   return (
-    <div className="flex flex-col gap-2">
-      <label className="text-[1.1rem] font-medium" htmlFor={id}>
+    <div className="flex flex-col gap-1.5">
+      <label className="text-sm font-medium" htmlFor={id}>
         {label}
         {optional && <span className="font-normal text-[#9a9a9a]"> (optional)</span>}
       </label>
@@ -202,9 +202,9 @@ export default function Profile() {
   }
 
   return (
-    <div className="max-w-[1160px] pb-12 pt-2 text-[#111]">
-      <h1 className="mb-1.5 mt-0 text-[2.25rem] font-bold leading-[1.15] max-[768px]:text-[1.75rem]">Profile</h1>
-      <p className="mb-6 mt-0 text-[0.95rem]">Manage your personal and store profile information.</p>
+    <div className="max-w-[1100px] pb-8 pt-1 text-[#111]">
+      <h1 className="mb-1.5 mt-0 text-[2rem] font-bold leading-[1.15] max-[768px]:text-[1.75rem]">Profile</h1>
+      <p className="mb-5 mt-0 text-[0.9rem]">Manage your personal and store profile information.</p>
 
       {banner && (
         <div
@@ -219,7 +219,7 @@ export default function Profile() {
         <p className="text-[#9a9a9a]">Loading your profile…</p>
       ) : (
         <form className="profile-form" onSubmit={handleSubmit} noValidate>
-          <div className="grid grid-cols-2 gap-x-5 gap-y-6 max-[768px]:grid-cols-1">
+          <div className="grid grid-cols-2 gap-x-5 gap-y-4 max-[768px]:grid-cols-1">
             <Field
               id="fullName"
               label="Full Name"
@@ -268,10 +268,10 @@ export default function Profile() {
             />
           </div>
 
-          <div className="relative mt-8 w-40">
+          <div className="relative mt-6 w-36">
             <button
               type="button"
-              className={`flex h-[138px] w-40 cursor-pointer flex-col items-center justify-center gap-0.5 overflow-hidden rounded-lg border border-[#d9d9d9] bg-white p-2 text-[0.7rem] leading-[1.4] text-[#9a9a9a] transition-[border-color] duration-150 hover:border-[#279a3a] focus-visible:border-[#279a3a] focus-visible:outline-none${displayedImage ? ' p-0' : ''}`}
+              className={`flex h-32 w-36 cursor-pointer flex-col items-center justify-center gap-0.5 overflow-hidden rounded-lg border border-[#d9d9d9] bg-white p-2 text-[0.7rem] leading-[1.4] text-[#9a9a9a] transition-[border-color] duration-150 hover:border-[#279a3a] focus-visible:border-[#279a3a] focus-visible:outline-none${displayedImage ? ' p-0' : ''}`}
               onClick={() => fileInputRef.current?.click()}
               aria-label={displayedImage ? 'Change profile image' : 'Upload profile image'}
             >
@@ -306,10 +306,10 @@ export default function Profile() {
             {errors.profileImage && <p className="mt-2 max-w-[260px] w-max text-[0.85rem] text-[#c62828]">{errors.profileImage}</p>}
           </div>
 
-          <div className="mt-14 flex justify-end gap-5 max-[768px]:mt-10 max-[768px]:flex-col-reverse">
+          <div className="mt-10 flex justify-end gap-3 max-[768px]:mt-8 max-[768px]:flex-col-reverse">
             <button
               type="button"
-              className="h-[55px] w-[220px] cursor-pointer rounded border border-[#111] bg-white text-[1.2rem] font-medium text-[#111] transition-[background-color,opacity] duration-150 enabled:hover:bg-[#f4f4f4] focus-visible:outline-3 focus-visible:outline-[rgba(39,154,58,.4)] focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 max-[768px]:w-full"
+              className="h-12 w-[180px] cursor-pointer rounded border border-[#111] bg-white text-base font-medium text-[#111] transition-[background-color,opacity] duration-150 enabled:hover:bg-[#f4f4f4] focus-visible:outline-3 focus-visible:outline-[rgba(39,154,58,.4)] focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 max-[768px]:w-full"
               onClick={handleCancel}
               disabled={!dirty || saving}
             >
@@ -317,7 +317,7 @@ export default function Profile() {
             </button>
             <button
               type="submit"
-              className="h-[55px] w-[220px] cursor-pointer rounded border border-[#279a3a] bg-[#279a3a] text-[1.2rem] font-medium text-white transition-[background-color,opacity] duration-150 enabled:hover:bg-[#1f7f2f] focus-visible:outline-3 focus-visible:outline-[rgba(39,154,58,.4)] focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 max-[768px]:w-full"
+              className="h-12 w-[180px] cursor-pointer rounded border border-[#279a3a] bg-[#279a3a] text-base font-medium text-white transition-[background-color,opacity] duration-150 enabled:hover:bg-[#1f7f2f] focus-visible:outline-3 focus-visible:outline-[rgba(39,154,58,.4)] focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 max-[768px]:w-full"
               disabled={!dirty || saving}
             >
               {saving ? 'Saving…' : 'Save'}

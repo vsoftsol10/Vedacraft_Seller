@@ -303,6 +303,7 @@ const Orders = lazy(() => import("./pages/Order"));
 const Login = lazy(() => import("./pages/Login"));
 const Reviews = lazy(() => import("./pages/Reviews"));
 const Profile = lazy(() => import("./pages/Profile"));
+const Documents = lazy(() => import("./pages/Documents"));
 const BusinessInformation = lazy(() => import("./pages/BusinessInformation"));
 const BankDetails = lazy(() => import("./pages/BankDetails"));
 const SellingLocation = lazy(() => import("./pages/SellingLocation"));
@@ -310,7 +311,7 @@ const Insights = lazy(() => import("./pages/Insights"));
 const Earning = lazy(() => import("./pages/Earning"));
 const Offers = lazy(() => import("./pages/Offers"));
 const CreateOffer = lazy(() => import("./pages/CreateOffer"));
-const NAV_ITEM = "mb-1 flex items-center gap-[10px] rounded-lg px-3 py-2.5 text-sm text-[#444] no-underline hover:bg-[#f5f5f5]";
+const NAV_ITEM = "mb-0.5 flex items-center gap-2 rounded-md px-2.5 py-2 text-xs text-[#444] no-underline hover:bg-[#f5f5f5]";
 const ACTIVE_NAV_ITEM = "bg-[#e4f4e2] font-semibold text-[#2f7a3c]";
 const SETTINGS_BUTTON = `${NAV_ITEM} w-full cursor-pointer border-0 bg-transparent text-left font-[inherit]`;
 
@@ -365,8 +366,8 @@ function HeaderProfileImage() {
     };
   }, []);
 
-  if (!imageUrl) return <div className="h-9 w-9 rounded-full bg-[#ddd]" aria-label="Profile image" />;
-  return <img src={imageUrl} alt="Profile" className="h-9 w-9 rounded-full object-cover" onError={() => setImageUrl(null)} />;
+  if (!imageUrl) return <div className="h-7 w-7 rounded-full bg-[#ddd]" aria-label="Profile image" />;
+  return <img src={imageUrl} alt="Profile" className="h-7 w-7 rounded-full object-cover" onError={() => setImageUrl(null)} />;
 }
 
 function NewOrderCelebration({ headerRef, bellRef, sellerId }) {
@@ -464,8 +465,8 @@ const searchablePages = [
   { label: "Earnings", to: "/earnings", keywords: "revenue payments payout" },
   { label: "Reviews", to: "/reviews", keywords: "ratings feedback" },
   { label: "Offers", to: "/settings/offers", keywords: "discount promotion coupon deal" },
-  { label: "Settings", to: "/settings/profile", keywords: "account preferences" },
-  { label: "Profile", to: "/settings/profile", keywords: "settings personal account" },
+  { label: "Settings", to: "/settings/documents", keywords: "account preferences documents" },
+  { label: "Documents", to: "/settings/documents", keywords: "settings upload pan gst aadhaar" },
   { label: "Business Information", to: "/settings/business-information", keywords: "settings store business" },
   { label: "Bank Details", to: "/settings/bank-details", keywords: "settings payout payment account" },
   { label: "Selling Location", to: "/settings/selling-location", keywords: "settings address location" },
@@ -504,8 +505,8 @@ function PageSearch({ onNavigate }) {
     if (event.key === "Escape") setOpen(false);
   };
 
-  return <div ref={searchRef} className="relative max-w-[500px] flex-1">
-    <input value={query} onChange={(event) => { setQuery(event.target.value); setOpen(true); }} onFocus={() => normalizedQuery && setOpen(true)} onKeyDown={handleKeyDown} className="w-full rounded-lg border border-[#e5e5e5] px-3.5 py-2.5 text-sm" placeholder="Search pages" role="combobox" aria-expanded={open && Boolean(normalizedQuery)} aria-controls="page-search-results" aria-autocomplete="list" />
+  return <div ref={searchRef} className="relative max-w-[440px] flex-1">
+    <input value={query} onChange={(event) => { setQuery(event.target.value); setOpen(true); }} onFocus={() => normalizedQuery && setOpen(true)} onKeyDown={handleKeyDown} className="w-full rounded-md border border-[#e5e5e5] px-3 py-2 text-xs" placeholder="Search pages" role="combobox" aria-expanded={open && Boolean(normalizedQuery)} aria-controls="page-search-results" aria-autocomplete="list" />
     {open && normalizedQuery && <div id="page-search-results" role="listbox" className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
       {matches.length ? matches.map((page, index) => <button key={`${page.label}-${page.to}`} type="button" role="option" aria-selected={index === activeIndex} onMouseEnter={() => setActiveIndex(index)} onClick={() => choose(page)} className={`flex w-full cursor-pointer items-center border-0 px-3.5 py-2.5 text-left text-sm ${index === activeIndex ? "bg-[#eaf6e8] text-[#276b35]" : "bg-white text-[#333] hover:bg-gray-50"}`}><span>{page.label}</span><span className="ml-auto text-xs text-gray-400">Go to page</span></button>) : <p className="m-0 px-3.5 py-3 text-sm text-gray-500">No matching pages.</p>}
     </div>}
@@ -553,13 +554,13 @@ function SellerPortal() {
         )}
 
         <aside
-          className={`fixed inset-y-0 left-0 z-40 flex h-screen w-60 shrink-0 flex-col overflow-y-auto border-r border-[#eee] bg-white px-4 py-6 transition-transform duration-200 ease-in-out
+          className={`fixed inset-y-0 left-0 z-40 flex h-screen w-52 shrink-0 flex-col overflow-y-auto border-r border-[#eee] bg-white px-3 py-4 transition-transform duration-200 ease-in-out
             ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:sticky lg:top-0 lg:translate-x-0`}
         >
-          <div className="mb-4 flex items-center justify-between border-b border-[#eee] px-2 pb-6">
+          <div className="mb-3 flex items-center justify-between border-b border-[#eee] px-1 pb-4">
             <div>
-              <div className="h-[52px] overflow-hidden">
-                <img src={logo} alt="VedaCrafts" className="h-16 w-auto" />
+              <div className="h-10 overflow-hidden">
+                <img src={logo} alt="VedaCrafts" className="h-12 w-auto" />
               </div>
               <span className="mt-1 block whitespace-nowrap text-[10px] tracking-[0.02em] text-[#66756a]">Connect | Collaborate | Grow</span>
             </div>
@@ -575,11 +576,11 @@ function SellerPortal() {
           <nav className="flex-1">
             {navItems.map(({ to, label, icon: Icon }) => label === "Settings" ? (
               <div key={to}>
-                <button type="button" className={SETTINGS_BUTTON} onClick={() => setSettingsOpen((open) => !open)} aria-expanded={settingsOpen}>
-                  <Icon size={18} /> <span className="flex-1">Settings</span><ChevronDown size={16} className={`transition-transform duration-200 ${settingsOpen ? "rotate-180" : ""}`} />
+                <button type="button" className={SETTINGS_BUTTON} onClick={() => { navigate("/settings/profile"); setSettingsOpen(true); }} aria-expanded={settingsOpen}>
+                  <Icon size={16} /> <span className="flex-1">Settings</span><ChevronDown size={14} className={`transition-transform duration-200 ${settingsOpen ? "rotate-180" : ""}`} />
                 </button>
                 {settingsOpen && <div className="mb-1.5 ml-[34px] grid -mt-px gap-0.5">
-                  <NavLink to="/settings/profile" onClick={closeSidebar} className={({ isActive }) => `rounded-md px-2.5 py-[7px] text-left text-xs text-[#666] no-underline hover:bg-[#f1f8f0] hover:font-semibold hover:text-[#2f7a3c]${isActive ? " bg-[#f1f8f0] font-semibold text-[#2f7a3c]" : ""}`}>Profile</NavLink>
+                  <NavLink to="/settings/documents" onClick={closeSidebar} className={({ isActive }) => `rounded-md px-2.5 py-[7px] text-left text-xs text-[#666] no-underline hover:bg-[#f1f8f0] hover:font-semibold hover:text-[#2f7a3c]${isActive ? " bg-[#f1f8f0] font-semibold text-[#2f7a3c]" : ""}`}>Documents</NavLink>
                   <NavLink to="/settings/business-information" onClick={closeSidebar} className={({ isActive }) => `rounded-md px-2.5 py-[7px] text-left text-xs text-[#666] no-underline hover:bg-[#f1f8f0] hover:font-semibold hover:text-[#2f7a3c]${isActive ? " bg-[#f1f8f0] font-semibold text-[#2f7a3c]" : ""}`}>Business Information</NavLink>
                   <NavLink to="/settings/bank-details" onClick={closeSidebar} className={({ isActive }) => `rounded-md px-2.5 py-[7px] text-left text-xs text-[#666] no-underline hover:bg-[#f1f8f0] hover:font-semibold hover:text-[#2f7a3c]${isActive ? " bg-[#f1f8f0] font-semibold text-[#2f7a3c]" : ""}`}>Bank Details</NavLink>
                   <NavLink to="/settings/selling-location" onClick={closeSidebar} className={({ isActive }) => `rounded-md px-2.5 py-[7px] text-left text-xs text-[#666] no-underline hover:bg-[#f1f8f0] hover:font-semibold hover:text-[#2f7a3c]${isActive ? " bg-[#f1f8f0] font-semibold text-[#2f7a3c]" : ""}`}>Selling Location</NavLink>
@@ -587,7 +588,7 @@ function SellerPortal() {
               </div>
             ) : (
               <NavLink key={to} to={to} onClick={closeSidebar} className={({ isActive }) => `${NAV_ITEM}${isActive ? ` ${ACTIVE_NAV_ITEM}` : ""}`}>
-                <Icon size={18} /> {label}
+                <Icon size={16} /> {label}
               </NavLink>
             ))}
           </nav>
@@ -596,8 +597,8 @@ function SellerPortal() {
           </button>
         </aside>
 
-        <main className="flex-1 px-4 py-6 sm:px-8">
-          <header ref={headerRef} className="sticky top-0 z-20 -mx-4 -mt-6 mb-5 flex items-center justify-between gap-4 border-b border-[#e5e7eb] bg-white px-4 py-4 sm:-mx-8 sm:px-8">
+        <main className="flex-1 px-4 py-4 sm:px-6">
+          <header ref={headerRef} className="sticky top-0 z-20 -mx-4 -mt-4 mb-4 flex items-center justify-between gap-3 border-b border-[#e5e7eb] bg-white px-4 py-3 sm:-mx-6 sm:px-6">
             <button
               type="button"
               className="text-[#444] hover:text-[#222] lg:hidden"
@@ -607,7 +608,7 @@ function SellerPortal() {
               <Menu size={22} />
             </button>
             <PageSearch onNavigate={navigateToPage} />
-            <div className="relative flex items-center gap-4">
+            <div className="relative flex items-center gap-3">
               <NotificationMenu bellRef={bellRef} />
               <HeaderProfileImage />
             </div>
@@ -625,7 +626,9 @@ function SellerPortal() {
               <Route path="/earnings" element={<Earning />} />
               <Route path="/reviews" element={<Reviews />} />
               <Route path="/settings/reviews" element={<Reviews />} />
+              <Route path="/settings" element={<Navigate to="/settings/profile" replace />} />
               <Route path="/settings/profile" element={<Profile />} />
+              <Route path="/settings/documents" element={<Documents />} />
               <Route path="/settings/business-information" element={<BusinessInformation />} />
               <Route path="/settings/bank-details" element={<BankDetails />} />
               <Route path="/settings/selling-location" element={<SellingLocation />} />

@@ -22,6 +22,7 @@ import {
   deleteProduct,
   getProductById,
   getProductCategories,
+  getNextProductSku,
   getProducts,
   getProductStats,
   updateProduct,
@@ -39,6 +40,7 @@ router.use(requireSeller);
 
 router.get("/stats", getProductStats);
 router.get("/categories", getProductCategories);
+router.get("/next-sku", getNextProductSku);
 router.get("/bulk-template", downloadBulkTemplate);
 router.patch("/bulk-stock", bulkAddStock);
 router.get("/", getProducts);

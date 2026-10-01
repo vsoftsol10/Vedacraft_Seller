@@ -54,7 +54,7 @@ export default function Dashboard() {
         <RecentOrdersTable orders={dashboard?.recentOrders ?? []} />
         <TopProductsTable products={dashboard?.topProducts ?? []} />
       </div>
-      <LowStockAlert items={dashboard?.lowStock ?? []} />
+      {/* <LowStockAlert items={dashboard?.lowStock ?? []} /> */}
     </div>
   );
 }
