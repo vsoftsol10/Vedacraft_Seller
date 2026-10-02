@@ -2,13 +2,14 @@ import { useState } from "react";
 import { Eye, EyeOff, KeyRound, Lock, LoaderCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { loginSeller } from "../api/authapi";
-import logo from "../assets/images/logo.png";
+import logo from "../assets/images/logo-transparent.png";
 import loginBackground from "../assets/images/seller-login-background.png";
 import loginCharacter from "../assets/images/seller-login-character.png";
 
 const inputWrapClass = "flex h-[3.2em] items-center gap-[.7em] rounded-[.6em] border border-[#e6e4de] bg-[#faf9f6] px-[1em] text-[#8a968c] transition-[border-color,box-shadow] duration-150 focus-within:border-brand-green focus-within:shadow-[0_0_0_3px_#e3f2e5]";
 const inputClass = "min-w-0 w-full border-0 bg-transparent text-[1.05em] text-[#23372a] outline-0 font-[inherit] placeholder:text-[#9aa59d]";
 const labelClass = "text-[1em] font-bold text-[#214631]";
+const REMEMBERED_SELLER_CODE_KEY = "veda_remembered_seller_code";
 
 function SpeechBubble({ className = "", children }) {
   return (
@@ -21,8 +22,9 @@ function SpeechBubble({ className = "", children }) {
 
 export default function Login() {
   const navigate = useNavigate();
-  const [sellerCode, setSellerCode] = useState("");
+  const [sellerCode, setSellerCode] = useState(() => localStorage.getItem(REMEMBERED_SELLER_CODE_KEY) || "");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(() => Boolean(localStorage.getItem(REMEMBERED_SELLER_CODE_KEY)));
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,6 +36,14 @@ export default function Login() {
     if (!sellerCode.trim() || !password) {
       setError("Enter your seller code and password.");
       return;
+    }
+
+    // Frontend-only convenience until backend authentication/session management is implemented.
+    // Never store the password; only the seller code may be remembered on this device.
+    if (rememberMe) {
+      localStorage.setItem(REMEMBERED_SELLER_CODE_KEY, sellerCode.trim());
+    } else {
+      localStorage.removeItem(REMEMBERED_SELLER_CODE_KEY);
     }
 
     try {
@@ -55,14 +65,11 @@ export default function Login() {
          the woman, props, bubbles and ground line all scale from it. */
       style={{ fontSize: "clamp(16px, 0.9vw, 36px)", "--panel": "44vw" }}
     >
-      {/* LEFT: background + logo + headline (static) + bubbles (animated) */}
+      {/* LEFT: background + marketing content (static) + bubbles (animated) */}
       <aside className="relative min-h-screen overflow-hidden bg-cover bg-bottom max-[800px]:hidden" style={{ backgroundImage: `url(${loginBackground})` }} aria-hidden="true">
-        {/* Logo in the top-left corner (the image file has empty padding, hence the negative offset).
-            Border cropped off; white is lifted and blended into the panel. */}
-        <img src={logo} alt="" className="absolute -left-[3.8em] top-[.8em] h-[7.5em] w-auto mix-blend-multiply [clip-path:inset(5%_3%)] [filter:brightness(1.08)_contrast(1.1)]" />
-
-        {/* Headline block: fixed in place and always visible (no animation) */}
+        {/* Marketing content is anchored as one column so the logo and copy share a left edge. */}
         <div className="absolute left-[6%] top-[20%] max-w-[38em]">
+          <img src={logo} alt="VedaCrafts" width="129" height="70" className="mb-[2em] block h-auto w-[8.5rem] aspect-[129/70] object-contain" />
           <span className="mb-[.9em] block h-[.3em] w-[3em] rounded-full bg-[#f6c744]" aria-hidden="true" />
           <h2 className="m-0 max-w-[13em] text-balance text-[1.7em] font-bold leading-[1.1] tracking-[-0.03em] text-[#1f4a30]">Your craft deserves a bigger stage.</h2>
           <p className="mb-0 mt-[.65em] text-[.75em] leading-relaxed text-[#617665]">Join a thoughtful marketplace built for makers, artisans, and independent sellers.</p>
@@ -80,10 +87,13 @@ export default function Login() {
       </div>
 
       {/* RIGHT: login card. min-[801px]:text-[1.4em] scales everything inside it */}
-      <section className="relative z-30 flex h-dvh items-center justify-center px-[1.75em] py-[2em] max-[800px]:h-auto max-[800px]:min-h-screen max-[800px]:px-[1.25em]" aria-labelledby="login-title">
-        <div className="w-full max-w-[26em] rounded-[1em] bg-white px-[2.1em] py-[1.4em] shadow-[0_14px_42px_rgba(31,70,45,0.11)] min-[801px]:text-[.9em] max-[800px]:px-[1.5em] max-[800px]:py-[2em]">
-          <img src={logo} alt="VedaCrafts" className="mb-[1.5em] hidden h-[4em] w-auto mix-blend-multiply max-[800px]:block" />
+      <section className="relative z-30 flex min-h-dvh flex-col items-center justify-center px-4 py-6 sm:px-6 sm:py-8 min-[801px]:h-dvh" aria-labelledby="login-title">
+        {/* Mobile logo remains separate because the marketing panel is hidden at this size. */}
+        <div className="mb-5 flex w-full justify-center sm:hidden">
+          <img src={logo} alt="VedaCrafts" width="129" height="70" className="h-auto w-[clamp(12rem,58.7vw,13.75rem)] aspect-[129/70] object-contain" />
+        </div>
 
+        <div className="w-full max-w-[26em] rounded-[1em] bg-white px-5 py-7 shadow-[0_14px_42px_rgba(31,70,45,0.11)] sm:px-[2.1em] sm:py-[1.8em] min-[801px]:text-[.9em]">
           <div className="mb-[2em]">
             <h1 id="login-title" className="m-0 text-[2em] font-normal tracking-[-0.03em] text-[#214631]">Welcome back</h1>
             <p className="mb-0 mt-[.55em] text-[.95em] text-[#718173]">Sign in to manage your seller account</p>
@@ -105,13 +115,12 @@ export default function Login() {
               </button>
             </div>
 
-            {/* Visual only for now: not wired to any logic */}
-            <div className="mt-[.7em] flex items-center justify-between text-[.98em]">
-              <label className="flex cursor-pointer items-center gap-[.6em] text-[#5d6f62]" htmlFor="remember">
-                <input id="remember" type="checkbox" className="size-[1.15em] cursor-pointer accent-[#2f7d4a]" disabled={isSubmitting} />
+            <div className="mt-[.7em] flex items-center justify-between gap-2 text-[.875em] sm:text-[.98em]">
+              <label className="flex h-11 shrink-0 cursor-pointer items-center gap-[.6em] whitespace-nowrap text-[#5d6f62]" htmlFor="remember">
+                <input id="remember" type="checkbox" className="size-5 cursor-pointer accent-[#2f7d4a]" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} disabled={isSubmitting} />
                 Remember me
               </label>
-              <button type="button" className="cursor-pointer border-0 bg-transparent p-0 font-[inherit] font-bold text-[#2f7d4a] hover:underline">Forgot password?</button>
+              <button type="button" className="h-11 shrink-0 cursor-pointer whitespace-nowrap border-0 bg-transparent px-1 font-[inherit] font-bold text-[#2f7d4a] hover:underline">Forgot password?</button>
             </div>
 
             {error && <p className="mb-0 mt-[.25em] text-[.95em] text-danger" role="alert">{error}</p>}

@@ -15,7 +15,6 @@ import {
   LogOut,
 } from "lucide-react";
 import api, { clearSellerSession } from "./api/productapi";
-import { clearSellerSession } from "./api/productapi";
 import { fetchProfile } from "./api/profileapi";
 import logo from "./assets/images/logo-transparent.png";
 
