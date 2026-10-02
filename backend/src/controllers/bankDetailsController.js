@@ -30,6 +30,7 @@ const findSeller = async (sellerId) => {
 
 const passwordConfirmationError = (res) => res.status(401).json({
   success: false,
+  code: "PASSWORD_CONFIRMATION_FAILED",
   message: "Please confirm your password to update bank details.",
 });
 

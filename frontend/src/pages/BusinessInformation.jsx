@@ -21,7 +21,7 @@ const EMPTY = {
 const BUSINESS_TYPES = ["Individual", "Registered Business"];
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg"];
-const SAVED_FIELDS = ["businessName", "storeName", "storeType", "storeDescription", "gstNumber", "panNumber"];
+const SAVED_FIELDS = ["businessName", "storeName", "storeType", "storeDescription", "gstNumber", "panNumber", "address1", "city", "state", "pinCode", "country"];
 
 const inputBase =
   "rounded-md border bg-white px-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-amber-400 focus:outline-none focus:ring-4 focus:ring-amber-400/25 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500";
@@ -38,6 +38,11 @@ function validate(values) {
   if (storeName && (storeName.length < 2 || storeName.length > 100)) errors.storeName = "Store name must be 2-100 characters.";
   if (storeType && (storeType.length < 2 || storeType.length > 100)) errors.storeType = "Business category must be 2-100 characters when provided.";
   if (String(values.storeDescription ?? "").length > 1000) errors.storeDescription = "Description can be up to 1000 characters.";
+  if (clean(values.address1).length < 2 || clean(values.address1).length > 300) errors.address1 = "Address must be 2-300 characters.";
+  if (clean(values.city).length < 2 || clean(values.city).length > 100) errors.city = "City must be 2-100 characters.";
+  if (clean(values.state).length < 2 || clean(values.state).length > 100) errors.state = "State must be 2-100 characters.";
+  if (clean(values.pinCode).length < 3 || clean(values.pinCode).length > 12) errors.pinCode = "Pin code must be 3-12 characters.";
+  if (clean(values.country).length < 2 || clean(values.country).length > 100) errors.country = "Country must be 2-100 characters.";
   return errors;
 }
 
@@ -49,6 +54,11 @@ const toFormValues = (data) => ({
   storeDescription: data?.storeDescription ?? "",
   panNumber: data?.panNumber ?? "",
   gstNumber: data?.gstNumber ?? "",
+  address1: data?.address1 ?? "",
+  city: data?.city ?? "",
+  state: data?.state ?? "",
+  pinCode: data?.pinCode ?? "",
+  country: data?.country ?? "India",
 });
 
 export default function BusinessInformation() {
@@ -147,7 +157,7 @@ export default function BusinessInformation() {
     const found = validate(values);
     setErrors(found);
     if (Object.keys(found).length) {
-      setTouched({ businessName: true, storeName: true, storeType: true, storeDescription: true });
+      setTouched({ businessName: true, storeName: true, storeType: true, storeDescription: true, address1: true, city: true, state: true, pinCode: true, country: true });
       return;
     }
 
@@ -169,10 +179,10 @@ export default function BusinessInformation() {
   const renderField = ({ label, name, required, optional, disabled, hint, placeholder, as = "input", rows = 4, maxLength }) => {
     const Control = as;
     const error = errors[name];
-    const sizeClass = as === "textarea" ? "min-h-[100px] resize-y py-2.5" : "h-[50px]";
+    const sizeClass = as === "textarea" ? "min-h-20 resize-y py-2" : "h-12";
     return (
-      <div className="flex flex-col gap-1.5 px-1" key={name}>
-        <label htmlFor={name} className="text-base text-gray-900">
+      <div className="flex flex-col gap-1.5" key={name}>
+        <label htmlFor={name} className="text-sm text-gray-900">
           {label}
           {required && <span className="text-red-600"> *</span>}
           {optional && <span className="text-gray-700"> (optional)</span>}
@@ -198,40 +208,40 @@ export default function BusinessInformation() {
   };
 
   if (loading) {
-    return <div className="flex max-w-[1100px] flex-col gap-5 pb-8 pt-2"><header><h1 className="m-0 text-[32px] font-bold text-gray-900">Business Information</h1><p className="mb-0 mt-1.5 text-[15px] text-gray-800">Manage your personal and store profile information.</p></header><p className="m-0 text-sm text-gray-500">Loading business information…</p></div>;
+    return <div className="flex max-w-[1100px] flex-col gap-5 pb-8 pt-2"><header><h1 className="m-0 text-[26px] font-bold text-gray-900 sm:text-[32px]">Business Information</h1><p className="mb-0 mt-1.5 text-[15px] text-gray-800">Manage your personal and store profile information.</p></header><p className="m-0 text-sm text-gray-500">Loading business information…</p></div>;
   }
 
   if (loadFailed) {
-    return <div className="flex max-w-[1100px] flex-col gap-5 pb-8 pt-2"><header><h1 className="m-0 text-[32px] font-bold text-gray-900">Business Information</h1><p className="mb-0 mt-1.5 text-[15px] text-gray-800">Manage your personal and store profile information.</p></header><p className="m-0 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{banner?.text || "Unable to load business information."}</p><button type="button" onClick={loadBusiness} className="w-fit rounded border border-gray-900 bg-white px-4 py-2 text-sm font-semibold text-gray-900">Retry</button></div>;
+    return <div className="flex max-w-[1100px] flex-col gap-5 pb-8 pt-2"><header><h1 className="m-0 text-[26px] font-bold text-gray-900 sm:text-[32px]">Business Information</h1><p className="mb-0 mt-1.5 text-[15px] text-gray-800">Manage your personal and store profile information.</p></header><p className="m-0 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{banner?.text || "Unable to load business information."}</p><button type="button" onClick={loadBusiness} className="w-fit rounded border border-gray-900 bg-white px-4 py-2 text-sm font-semibold text-gray-900">Retry</button></div>;
   }
 
   return (
-    <div className="flex max-w-[1100px] flex-col gap-5 pb-8 pt-2">
+    <div className="flex max-w-[1100px] flex-col gap-4 pb-8 pt-1">
       <header>
-        <h1 className="m-0 text-[32px] font-bold text-gray-900">Business Information</h1>
-        <p className="mb-0 mt-1.5 text-[15px] text-gray-800">Manage your personal and store profile information.</p>
+        <h1 className="m-0 text-[26px] font-bold text-gray-900 sm:text-[32px]">Business Information</h1>
+        <p className="mb-0 mt-1 text-sm text-gray-800">Manage your personal and store profile information.</p>
       </header>
 
-      <section className="flex flex-col gap-4 rounded-[14px] border border-gray-200 bg-white px-3 pb-5 pt-4">
-        <h2 className="m-0 ml-1 text-[15px] font-bold text-gray-900">Store Details</h2>
+      <section className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-3">
+        <h2 className="m-0 text-sm font-bold text-gray-900">Store Details</h2>
 
-        <div className="grid grid-cols-1 gap-x-3 gap-y-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-x-3 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
           {renderField({ label: "Business Name", name: "businessName", placeholder: "Enter business name", maxLength: 150 })}
           {renderField({ label: "Store Name", name: "storeName", placeholder: "Enter store name", maxLength: 100 })}
           {renderField({ label: "Business Category", name: "storeType", required: true, placeholder: "Enter business category", maxLength: 100 })}
           {renderField({ label: "Sub Category", name: "subCategory", optional: true, placeholder: "Enter sub category" })}
         </div>
 
-        <div className="grid grid-cols-1 gap-x-3 gap-y-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-x-3 gap-y-3 md:grid-cols-2">
           {renderField({ label: "GST Number", name: "gstNumber", optional: true, disabled: true, placeholder: "Not provided", hint: "Verified at approval. Contact support to change." })}
           {renderField({ label: "PAN Number", name: "panNumber", required: true, disabled: true, placeholder: "Not provided", hint: "Verified at approval. Contact support to change." })}
         </div>
 
-        <fieldset className="m-0 border-0 px-3.5">
-          <legend className="p-0 text-[15px] font-bold text-gray-900">Business Type</legend>
-          <div className="mt-2.5 flex gap-6">
+        <fieldset className="m-0 border-0 p-0">
+          <legend className="p-0 text-sm font-bold text-gray-900">Business Type</legend>
+          <div className="mt-2 flex gap-5">
             {BUSINESS_TYPES.map((type) => (
-              <label key={type} className="flex cursor-pointer items-center gap-1.5 text-[15px]">
+              <label key={type} className="flex cursor-pointer items-center gap-1.5 text-sm">
                 <input
                   type="radio"
                   name="businessType"
@@ -257,10 +267,10 @@ export default function BusinessInformation() {
         })}
       </section>
 
-      <section className="flex flex-col gap-4 rounded-[14px] border border-gray-200 bg-white px-3 pb-5 pt-4">
-        <h2 className="m-0 ml-1 text-[15px] font-bold text-gray-900">Business Address</h2>
+      <section className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-3">
+        <h2 className="m-0 text-sm font-bold text-gray-900">Business Address</h2>
 
-        <div className="grid grid-cols-1 gap-x-3 gap-y-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-x-3 gap-y-3 md:grid-cols-2">
           {renderField({ label: "City", name: "city", required: true, placeholder: "Enter city" })}
           {renderField({ label: "State", name: "state", required: true, placeholder: "Enter state" })}
           {renderField({ label: "Pin code", name: "pinCode", required: true, placeholder: "6-digit pin code", maxLength: 6 })}
@@ -274,7 +284,7 @@ export default function BusinessInformation() {
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="flex h-[136px] w-40 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-[10px] border border-gray-300 bg-white p-0 text-xs text-gray-400 hover:border-amber-400"
+          className="flex h-32 w-36 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-lg border border-gray-300 bg-white p-0 text-xs text-gray-400 hover:border-amber-400"
         >
           {coverPreview ? (
             <img src={coverPreview} alt="Cover preview" className="h-full w-full object-cover" />
@@ -293,12 +303,12 @@ export default function BusinessInformation() {
 
       {banner && <p className={`m-0 rounded-md px-3 py-2 text-sm ${banner.type === "success" ? "border border-green-200 bg-green-50 text-green-800" : "border border-red-200 bg-red-50 text-red-700"}`} role={banner.type === "error" ? "alert" : "status"}>{banner.text}</p>}
 
-      <div className="flex flex-col-reverse gap-5 md:flex-row md:justify-end">
+      <div className="flex flex-col-reverse gap-3 md:flex-row md:justify-end">
         <button
           type="button"
           onClick={handleCancel}
           disabled={!dirty || saving}
-          className="h-12 w-full cursor-pointer rounded border border-gray-900 bg-white text-lg font-semibold text-gray-900 disabled:cursor-not-allowed disabled:opacity-60 md:h-[54px] md:w-[220px] md:text-[22px]"
+          className="h-12 w-full cursor-pointer rounded border border-gray-900 bg-white text-base font-medium text-gray-900 disabled:cursor-not-allowed disabled:opacity-60 md:w-[180px]"
         >
           Cancel
         </button>
@@ -306,7 +316,7 @@ export default function BusinessInformation() {
           type="button"
           onClick={handleSave}
           disabled={!dirty || saving}
-          className="h-12 w-full cursor-pointer rounded border border-green-700 bg-green-700 text-lg font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 md:h-[54px] md:w-[220px] md:text-[22px]"
+          className="h-12 w-full cursor-pointer rounded border border-green-700 bg-green-700 text-base font-medium text-white disabled:cursor-not-allowed disabled:opacity-60 md:w-[180px]"
         >
           {saving ? "Saving..." : "Save"}
         </button>

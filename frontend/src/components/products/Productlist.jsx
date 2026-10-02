@@ -1,9 +1,9 @@
-
 // import { useCallback, useEffect, useState, useRef } from "react";
 // import { useNavigate } from "react-router-dom";
-// import { Search, Plus, Package, IndianRupee, Box, Star, MoreVertical, Eye, Pencil, Trash2, Check, X } from "lucide-react";
+// import { Search, Plus, Upload, Package, IndianRupee, Box, Star, MoreVertical, Eye, Pencil, Trash2, Check, X } from "lucide-react";
 // import { deleteProduct, getProductCategories, getProducts, getProductStats ,updateProductStatus} from "../../api/productapi";
 // import ProductDetails from "./ProductDetails";
+// import BulkUploadProducts from "./Bulkproductupload";
 // import { FORM_ERROR_BANNER } from "../../constants/ui";
 
 // /* ---------- Tailwind class constants ---------- */
@@ -12,6 +12,8 @@
 // const PAGE_SUBTITLE = "text-[14px] text-[#777]";
 // const ADD_BTN =
 //   "flex cursor-pointer items-center gap-1.5 rounded-lg border-0 bg-[#f2a93b] px-[18px] py-3 font-semibold text-white hover:bg-[#e2992b]";
+// const BULK_ADD_BTN =
+//   "flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#e5e5e5] bg-white px-[18px] py-3 font-semibold text-[#333] hover:bg-[#f7f7f7]";
 
 // const STATS_ROW = "mb-5 grid grid-cols-[repeat(4,1fr)] gap-4";
 // const STAT_CARD = "flex items-start gap-3 rounded-xl border border-[#eee] bg-white p-4";
@@ -49,11 +51,6 @@
 // const TD = `${TD_COMMON} px-4 py-3.5`;
 // const TD_EMPTY = `${TD_COMMON} p-8 text-center text-[#999]`;
 
-// const STATUS_BADGE_BASE =
-//   "inline-flex cursor-pointer items-center gap-1.5 rounded-full border-0 px-2.5 py-1 text-[12px] font-semibold";
-// const STATUS_BADGE_ACTIVE = "bg-[#d9f2df] text-[#277437]";
-// const STATUS_BADGE_INACTIVE = "bg-[#fdeceb] text-[#c93636]";
-
 // // Stock-status badge styles, shown in the Stock column instead of a date.
 // const STOCK_BADGE_BASE = "inline-flex items-center rounded-full px-2.5 py-1 text-[12px] font-semibold";
 // const STOCK_BADGE_STYLES = {
@@ -87,6 +84,7 @@
 //   const [menuId, setMenuId] = useState(null);
 //   const [viewProduct, setViewProduct] = useState(null);
 //   const [actionError, setActionError] = useState("");
+//   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
 
 //   const loadData = useCallback(async (filters = {}) => {
 //     setLoading(true);
@@ -220,9 +218,14 @@
 //           <h1 className={PAGE_TITLE}>Products</h1>
 //           <p className={PAGE_SUBTITLE}>Manage your products, inventory and pricing all in one place</p>
 //         </div>
-//         <button className={ADD_BTN} onClick={() => navigate("/products/add")}>
-//           <Plus size={18} /> Add Product
-//         </button>
+//         <div className="flex gap-2.5">
+//           <button className={BULK_ADD_BTN} onClick={() => setBulkUploadOpen(true)}>
+//             <Upload size={18} /> Bulk Add
+//           </button>
+//           <button className={ADD_BTN} onClick={() => navigate("/products/add")}>
+//             <Plus size={18} /> Add Product
+//           </button>
+//         </div>
 //       </div>
 
 //       <div className={STATS_ROW}>
@@ -375,6 +378,7 @@
 //         </table>
 //       </div>
 //       <ProductDetails product={viewProduct} onClose={() => setViewProduct(null)} />
+//       {bulkUploadOpen && <BulkUploadProducts onClose={() => setBulkUploadOpen(false)} />}
 //     </div>
 //   );
 // }
@@ -404,33 +408,35 @@
 //     </div>
 //   );
 // }
+
 import { useCallback, useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Plus, Upload, Package, IndianRupee, Box, Star, MoreVertical, Eye, Pencil, Trash2, Check, X } from "lucide-react";
+import { Search, Plus, Upload, Package, IndianRupee, Box, Star, MoreVertical, Eye, Pencil, Trash2, Check, X, ChevronDown } from "lucide-react";
 import { deleteProduct, getProductCategories, getProducts, getProductStats ,updateProductStatus} from "../../api/productapi";
 import ProductDetails from "./ProductDetails";
 import BulkUploadProducts from "./Bulkproductupload";
+import BulkQuantityUpdate from "./BulkQuantityUpdate";
 import { FORM_ERROR_BANNER } from "../../constants/ui";
 
 /* ---------- Tailwind class constants ---------- */
-const PAGE_HEADER = "mb-5 flex items-start justify-between";
-const PAGE_TITLE = "mb-1 text-[28px] font-bold";
-const PAGE_SUBTITLE = "text-[14px] text-[#777]";
+const PAGE_HEADER = "mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between";
+const PAGE_TITLE = "mb-1 text-[22px] sm:text-[28px] font-bold";
+const PAGE_SUBTITLE = "text-[13px] sm:text-[14px] text-[#777]";
 const ADD_BTN =
-  "flex cursor-pointer items-center gap-1.5 rounded-lg border-0 bg-[#f2a93b] px-[18px] py-3 font-semibold text-white hover:bg-[#e2992b]";
+  "flex flex-1 sm:flex-none cursor-pointer items-center justify-center gap-1.5 rounded-lg border-0 bg-[#f2a93b] px-[18px] py-3 font-semibold text-white hover:bg-[#e2992b]";
 const BULK_ADD_BTN =
-  "flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#e5e5e5] bg-white px-[18px] py-3 font-semibold text-[#333] hover:bg-[#f7f7f7]";
+  "flex flex-1 sm:flex-none cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-[#e5e5e5] bg-white px-[18px] py-3 font-semibold text-[#333] hover:bg-[#f7f7f7]";
 
-const STATS_ROW = "mb-5 grid grid-cols-[repeat(4,1fr)] gap-4";
-const STAT_CARD = "flex items-start gap-3 rounded-xl border border-[#eee] bg-white p-4";
-const STAT_ICON = "flex h-9 w-9 items-center justify-center rounded-lg";
-const STAT_LABEL = "text-[13px] text-[#666]";
-const STAT_VALUE = "mt-1.5 mb-1 text-[22px] font-bold";
+const STATS_ROW = "mb-5 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4";
+const STAT_CARD = "flex items-start gap-3 rounded-xl border border-[#eee] bg-white p-3 sm:p-4";
+const STAT_ICON = "flex h-9 w-9 flex-none items-center justify-center rounded-lg";
+const STAT_LABEL = "text-[12px] sm:text-[13px] text-[#666]";
+const STAT_VALUE = "mt-1.5 mb-1 text-[19px] sm:text-[22px] font-bold";
 
-const TOOLBAR = "mb-3 flex justify-between gap-3";
+const TOOLBAR = "mb-3 flex flex-col gap-3 sm:flex-row sm:justify-between";
 const SEARCH_BOX = "flex flex-1 items-center gap-2 rounded-lg border border-[#e5e5e5] bg-white px-3.5 py-2.5";
-const SEARCH_INPUT = "flex-1 border-0 text-[14px] outline-none";
-const TOOLBAR_ACTIONS = "flex gap-2.5";
+const SEARCH_INPUT = "min-w-0 flex-1 border-0 text-[14px] outline-none";
+const TOOLBAR_ACTIONS = "flex flex-wrap gap-2.5";
 const GHOST_BTN =
   "flex min-w-[86px] cursor-pointer items-center justify-center gap-[5px] rounded-lg border px-4 py-2.5 text-[14px]";
 const GHOST_IDLE = "border-[#e5e5e5] bg-white";
@@ -438,6 +444,7 @@ const GHOST_ACTIVE = "border-[#e5a13b] bg-[#fff8eb] text-[#9b5d08]";
 
 const TOOLBAR_MENU =
   "absolute top-[calc(100%+7px)] right-0 z-10 max-h-[260px] min-w-[180px] overflow-y-auto rounded-[10px] border border-[#e8e8e8] bg-white p-1.5 shadow-[0_10px_28px_rgba(0,0,0,0.12)]";
+const SORT_MENU = "absolute top-[calc(100%+7px)] right-0 z-10 grid w-[360px] grid-cols-2 divide-x divide-[#eee] rounded-[10px] border border-[#e8e8e8] bg-white p-1.5 shadow-[0_10px_28px_rgba(0,0,0,0.12)]";
 const TOOLBAR_MENU_TITLE = "mx-2 mt-[5px] mb-1.5 text-[12px] font-semibold text-[#777]";
 const MENU_ITEM =
   "flex w-full cursor-pointer items-center gap-2 rounded-md border-0 px-2 py-[9px] text-left text-[13px]";
@@ -450,8 +457,8 @@ const FILTER_CHIP =
 const CLEAR_FILTERS =
   "cursor-pointer border-0 bg-transparent px-0.5 py-[5px] text-[13px] font-semibold text-[#b76b04] hover:underline";
 
-const TABLE_CARD = "rounded-xl border border-[#eee] bg-white";
-const TABLE = "w-full border-collapse";
+const TABLE_CARD = "rounded-xl border border-[#eee] bg-white overflow-x-auto";
+const TABLE = "w-full min-w-[760px] border-collapse";
 const TH = "border-b border-[#eee] px-4 py-3.5 text-left text-[13px] text-[#555]";
 const TD_COMMON = "border-b border-[#f5f5f5] text-[14px]";
 const TD = `${TD_COMMON} px-4 py-3.5`;
@@ -471,10 +478,10 @@ const ACTION_CELL = "action-cell relative w-[52px] border-b border-[#f5f5f5] px-
 const ACTION_TRIGGER =
   "grid cursor-pointer place-items-center rounded-md border-0 bg-transparent p-1.5 text-[#555] hover:bg-[#f1f5f1]";
 const ACTION_MENU =
-  "absolute right-3 bottom-[42px] z-[5] w-[130px] rounded-lg border border-[#e6e6e6] bg-white p-[5px] shadow-[0_8px_22px_rgba(0,0,0,0.14)]";
+  "absolute right-3 z-[5] w-[130px] rounded-lg border border-[#e6e6e6] bg-white p-[5px] shadow-[0_8px_22px_rgba(0,0,0,0.14)]";
 const ACTION_ITEM =
   "flex w-full cursor-pointer items-center gap-2 rounded-md border-0 bg-transparent p-[9px] text-left text-[13px] hover:bg-[#f6f7f6]";
-const TOGGLE_TRACK = "relative inline-flex h-6 w-11 cursor-pointer items-center rounded-full border-0 transition-colors";
+const TOGGLE_TRACK = "relative inline-flex h-6 w-11 flex-none cursor-pointer items-center rounded-full border-0 transition-colors";
 const TOGGLE_THUMB = "inline-block h-4 w-4 transform rounded-full bg-white transition-transform";
 export default function ProductsList() {
   const navigate = useNavigate();
@@ -483,6 +490,7 @@ export default function ProductsList() {
   const [search, setSearch] = useState("");
   const [categories, setCategories] = useState([]);
   const [category, setCategory] = useState("");
+  const [activityStatus, setActivityStatus] = useState("");
   const [stockStatus, setStockStatus] = useState("");
   const [openMenu, setOpenMenu] = useState(null);
   const toolbarRef = useRef(null);
@@ -491,6 +499,10 @@ export default function ProductsList() {
   const [viewProduct, setViewProduct] = useState(null);
   const [actionError, setActionError] = useState("");
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
+  const [bulkActionOpen, setBulkActionOpen] = useState(false);
+  const [quantityUpdateOpen, setQuantityUpdateOpen] = useState(false);
+  const bulkActionRef = useRef(null);
+  const searchTimerRef = useRef(null);
 
   const loadData = useCallback(async (filters = {}) => {
     setLoading(true);
@@ -498,6 +510,7 @@ export default function ProductsList() {
       const params = {
         search: filters.search ?? search,
         category: filters.category ?? category,
+        isActive: filters.isActive ?? activityStatus,
         stockStatus: filters.stockStatus ?? stockStatus,
         limit: 100,
       };
@@ -512,7 +525,7 @@ export default function ProductsList() {
     } finally {
       setLoading(false);
     }
-  }, [category, search, stockStatus]);
+  }, [activityStatus, category, search, stockStatus]);
 
   useEffect(() => {
     let cancelled = false;
@@ -524,6 +537,16 @@ export default function ProductsList() {
     };
     loadInitialData();
     return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => () => clearTimeout(searchTimerRef.current), []);
+
+  useEffect(() => {
+    const closeBulkAction = (event) => {
+      if (!bulkActionRef.current?.contains(event.target)) setBulkActionOpen(false);
+    };
+    document.addEventListener("mousedown", closeBulkAction);
+    return () => document.removeEventListener("mousedown", closeBulkAction);
   }, []);
 
   useEffect(() => {
@@ -549,9 +572,11 @@ export default function ProductsList() {
     };
   }, []);
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    loadData({ search });
+  const handleSearchChange = (e) => {
+    const nextSearch = e.target.value;
+    setSearch(nextSearch);
+    clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => loadData({ search: nextSearch.trim() }), 300);
   };
 
   const handleCategoryChange = (event) => {
@@ -568,10 +593,17 @@ export default function ProductsList() {
     setOpenMenu(null);
   };
 
+  const handleActivityStatusChange = (nextActivityStatus) => {
+    setActivityStatus(nextActivityStatus);
+    loadData({ isActive: nextActivityStatus });
+    setOpenMenu(null);
+  };
+
   const clearFilters = () => {
     setCategory("");
+    setActivityStatus("");
     setStockStatus("");
-    loadData({ category: "", stockStatus: "" });
+    loadData({ category: "", isActive: "", stockStatus: "" });
   };
 
   const handleDelete = async (product) => {
@@ -625,9 +657,15 @@ const handleToggleStatus = async (product) => {
           <p className={PAGE_SUBTITLE}>Manage your products, inventory and pricing all in one place</p>
         </div>
         <div className="flex gap-2.5">
-          <button className={BULK_ADD_BTN} onClick={() => setBulkUploadOpen(true)}>
-            <Upload size={18} /> Bulk Add
-          </button>
+          <div className="relative flex-1 sm:flex-none" ref={bulkActionRef}>
+            <button type="button" className={BULK_ADD_BTN} onClick={() => setBulkActionOpen((open) => !open)} aria-expanded={bulkActionOpen}>
+              <Upload size={18} /> Bulk Action <ChevronDown size={17} className={bulkActionOpen ? "rotate-180 transition-transform" : "transition-transform"} />
+            </button>
+            {bulkActionOpen && <div className="absolute right-0 top-[calc(100%+7px)] z-20 w-52 rounded-lg border border-[#e5e5e5] bg-white p-1.5 shadow-[0_10px_28px_rgba(0,0,0,0.12)]" role="menu">
+              <button type="button" className={`${MENU_ITEM} ${MENU_ITEM_IDLE}`} onClick={() => { setBulkActionOpen(false); setBulkUploadOpen(true); }}>Bulk Product Upload</button>
+              <button type="button" className={`${MENU_ITEM} ${MENU_ITEM_IDLE}`} onClick={() => { setBulkActionOpen(false); setQuantityUpdateOpen(true); }}>Quantity Update</button>
+            </div>}
+          </div>
           <button className={ADD_BTN} onClick={() => navigate("/products/add")}>
             <Plus size={18} /> Add Product
           </button>
@@ -642,15 +680,15 @@ const handleToggleStatus = async (product) => {
       </div>
 
       <div className={TOOLBAR}>
-        <form className={SEARCH_BOX} onSubmit={handleSearch}>
+        <div className={SEARCH_BOX}>
           <Search size={18} />
           <input
             className={SEARCH_INPUT}
             placeholder="Search"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={handleSearchChange}
           />
-        </form>
+        </div>
         <div className={TOOLBAR_ACTIONS} ref={toolbarRef}>
           <div className="relative">
             <button
@@ -678,31 +716,44 @@ const handleToggleStatus = async (product) => {
           <div className="relative">
             <button
               type="button"
-              className={`${GHOST_BTN} ${stockStatus ? GHOST_ACTIVE : GHOST_IDLE}`}
+              className={`${GHOST_BTN} ${activityStatus || stockStatus ? GHOST_ACTIVE : GHOST_IDLE}`}
               onClick={() => setOpenMenu(openMenu === "stock" ? null : "stock")}
               aria-expanded={openMenu === "stock"}
             >
-              {stockStatus || "Sort by"}
+              {activityStatus ? `${activityStatus[0].toUpperCase()}${activityStatus.slice(1)}` : stockStatus || "Sort by"}
             </button>
             {openMenu === "stock" && (
-              <div className={TOOLBAR_MENU} role="menu" aria-label="Filter by stock status">
-                <p className={TOOLBAR_MENU_TITLE}>Stock status</p>
-                {["", ...STOCK_STATUS_ORDER].map((item) => (
-                  <MenuOption key={item || "all"} selected={stockStatus === item} onClick={() => handleStockStatusChange(item)}>
-                    {item || "All products"}
-                  </MenuOption>
-                ))}
+              <div className={SORT_MENU} role="menu" aria-label="Filter by product and stock status">
+                <div className="pr-1.5">
+                  <p className={TOOLBAR_MENU_TITLE}>Product status</p>
+                  <MenuOption selected={!activityStatus} onClick={() => handleActivityStatusChange("")}>All statuses</MenuOption>
+                  <MenuOption selected={activityStatus === "active"} onClick={() => handleActivityStatusChange("active")}>Active</MenuOption>
+                  <MenuOption selected={activityStatus === "inactive"} onClick={() => handleActivityStatusChange("inactive")}>Inactive</MenuOption>
+                </div>
+                <div className="pl-1.5">
+                  <p className={TOOLBAR_MENU_TITLE}>Stock status</p>
+                  {["", ...STOCK_STATUS_ORDER].map((item) => (
+                    <MenuOption key={item || "all"} selected={stockStatus === item} onClick={() => handleStockStatusChange(item)}>
+                      {item || "All products"}
+                    </MenuOption>
+                  ))}
+                </div>
               </div>
             )}
           </div>
         </div>
       </div>
-      {(category || stockStatus) && (
+      {(category || activityStatus || stockStatus) && (
         <div className={APPLIED_FILTERS} aria-label="Applied filters">
           <span>Applied filters:</span>
           {category && (
             <button type="button" className={FILTER_CHIP} onClick={() => handleCategoryChange("")}>
               Category: {category} <X size={14} />
+            </button>
+          )}
+          {activityStatus && (
+            <button type="button" className={FILTER_CHIP} onClick={() => handleActivityStatusChange("")}>
+              Status: {activityStatus[0].toUpperCase()}{activityStatus.slice(1)} <X size={14} />
             </button>
           )}
           {stockStatus && (
@@ -735,7 +786,7 @@ const handleToggleStatus = async (product) => {
             {!loading && products.length === 0 && (
               <tr><td colSpan={7} className={TD_EMPTY}>No products found</td></tr>
             )}
-            {!loading && products.map((p) => {
+            {!loading && products.map((p, index) => {
               const stockLabel = getStockStatus(p);
               return (
               <tr key={p._id}>
@@ -770,7 +821,7 @@ const handleToggleStatus = async (product) => {
                 <td className={ACTION_CELL}>
                   <button className={ACTION_TRIGGER} onClick={() => setMenuId(menuId === p._id ? null : p._id)} aria-label={`Actions for ${p.productName}`}><MoreVertical size={18} /></button>
                   {menuId === p._id && (
-                    <div className={ACTION_MENU}>
+                    <div className={`${ACTION_MENU} ${index >= products.length - 2 ? "bottom-[42px]" : "top-[42px]"}`}>
                       <button className={ACTION_ITEM} onClick={() => { setViewProduct(p); setMenuId(null); }}><Eye size={16} /> View</button>
                       <button className={ACTION_ITEM} onClick={() => navigate(`/products/${p._id}/edit`)}><Pencil size={16} /> Edit</button>
                       <button className={`${ACTION_ITEM} text-[#c93636]`} onClick={() => handleDelete(p)}><Trash2 size={16} /> Delete</button>
@@ -785,6 +836,7 @@ const handleToggleStatus = async (product) => {
       </div>
       <ProductDetails product={viewProduct} onClose={() => setViewProduct(null)} />
       {bulkUploadOpen && <BulkUploadProducts onClose={() => setBulkUploadOpen(false)} />}
+      {quantityUpdateOpen && <BulkQuantityUpdate products={products} onClose={() => setQuantityUpdateOpen(false)} onUpdated={() => loadData()} />}
     </div>
   );
 }

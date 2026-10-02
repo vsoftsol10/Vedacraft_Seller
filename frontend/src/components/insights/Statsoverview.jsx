@@ -35,13 +35,13 @@ const STAT_CONFIG = [
 
 function StatCard({ label, value, icon: Icon, iconBg, iconColor }) {
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-5">
-      <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${iconBg}`}>
-        <Icon className={`h-5 w-5 ${iconColor}`} />
+    <div className="flex min-w-0 items-center gap-2 rounded-xl border border-gray-200 bg-white p-3 sm:gap-3 sm:p-5 lg:min-w-[auto]">
+      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg sm:h-10 sm:w-10 ${iconBg}`}>
+        <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${iconColor}`} />
       </div>
-      <div>
+      <div className="min-w-0 lg:min-w-[auto]">
         <p className="text-sm text-gray-500">{label}</p>
-        <p className="text-xl font-semibold text-gray-900">{value}</p>
+        <p className="text-lg font-semibold text-gray-900 sm:text-xl">{value}</p>
       </div>
     </div>
   );
@@ -65,7 +65,7 @@ export default function StatsOverview() {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
       {STAT_CONFIG.map((stat) =>
         isLoading ? (
           <StatCardSkeleton key={stat.key} />

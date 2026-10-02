@@ -1,5 +1,6 @@
 import { supabase } from "../config/supabase.js";
 import { createSellerToken } from "../middlewares/sellerAuth.js";
+import { recordSellerLogin } from "../services/notifications.js";
 
 export const loginSeller = async (req, res, next) => {
   try {
@@ -32,6 +33,10 @@ export const loginSeller = async (req, res, next) => {
       error.status = 403;
       throw error;
     }
+
+    // Notifications must never block a valid sign-in if the migration has not
+    // been applied yet or an older seller profile has no linked auth user.
+    try { await recordSellerLogin(seller.application_id); } catch (notificationError) { console.error("Unable to record seller login notification:", notificationError.message); }
 
     return res.json({
       success: true,

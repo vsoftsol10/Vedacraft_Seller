@@ -28,7 +28,10 @@ api.interceptors.response.use(
   (error) => {
     // Login itself uses a 401 to report invalid credentials. Every other API 401
     // means the seller session is no longer valid, matching the logout flow.
-    if (error.response?.status === 401 && error.config?.url !== "/auth/login") {
+    // A Bank Details update can return 401 when the user mistypes the separate
+    // password-confirmation field. That is not an expired seller session.
+    const isPasswordConfirmationFailure = error.response?.data?.code === "PASSWORD_CONFIRMATION_FAILED";
+    if (error.response?.status === 401 && error.config?.url !== "/auth/login" && !isPasswordConfirmationFailure) {
       clearSellerSession();
       if (window.location.pathname !== "/login") window.location.replace("/login");
     }
@@ -46,6 +49,9 @@ export const getProductStats = () =>
 
 export const getProductCategories = () =>
   cachedRequest("products:categories", () => api.get("/products/categories").then((res) => res.data), 60_000);
+
+export const getNextProductSku = (productName) =>
+  api.get("/products/next-sku", { params: { productName } }).then((res) => res.data);
 
 export const getProductById = (id) =>
   cachedRequest(`products:item:${id}`, () => api.get(`/products/${id}`).then((res) => res.data), 20_000);
@@ -69,6 +75,18 @@ export const deleteProduct = (id) =>
 
 export const updateProductStatus = (id, isActive) =>
   api.patch(`/products/${id}/status`, { isActive }).then((res) => { invalidateCachedRequests("products:"); return res.data; });
+
+export const bulkAddStock = (updates) =>
+  api.patch("/products/bulk-stock", { updates }).then((res) => { invalidateCachedRequests("products:"); return res.data; });
+
+export const getSellerDocuments = () => api.get("/documents").then((res) => res.data);
+
+export const uploadSellerDocument = (documentType, file) => {
+  const formData = new FormData();
+  formData.append("documentType", documentType);
+  formData.append("document", file);
+  return api.post("/documents", formData, { headers: { "Content-Type": "multipart/form-data" } }).then((res) => res.data);
+};
 
 
 

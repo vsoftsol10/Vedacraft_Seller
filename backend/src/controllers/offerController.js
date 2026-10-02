@@ -72,6 +72,31 @@ const ownedProducts = async (sellerId, productIds) => {
   return uniqueIds;
 };
 
+// A product may be discounted by only one active offer. An active "all
+// products" offer therefore excludes every other active offer for that seller.
+const assertNoActiveOfferConflict = async (sellerId, scope, productIds, excludeOfferId = null) => {
+  const { data: offers, error } = await supabase
+    .from(offersTable)
+    .select("id, scope, is_active, end_date")
+    .eq("seller_id", sellerId)
+    .eq("is_active", true);
+  if (error) throw error;
+
+  const activeOffers = (offers ?? []).filter((offer) => offer.id !== excludeOfferId && effectiveStatus(offer) === "Active");
+  if (!activeOffers.length) return;
+  if (scope === "all_products") {
+    throw apiError(409, "An active offer already exists. End or disable it before creating an all-products offer.");
+  }
+  if (activeOffers.some((offer) => offer.scope === "all_products")) {
+    throw apiError(409, "These products are already included in an active all-products offer.");
+  }
+
+  const activeOfferIds = activeOffers.map((offer) => offer.id);
+  const { data: links, error: linksError } = await supabase.from(offerProductsTable).select("product_id").in("offer_id", activeOfferIds).in("product_id", productIds);
+  if (linksError) throw linksError;
+  if (links?.length) throw apiError(409, "One or more selected products are already in another active offer.");
+};
+
 const normalizedPayload = (body, existing = {}) => {
   const offerName = cleanText(has(body, "offerName") ? body.offerName : existing.offer_name);
   if (!offerName) throw apiError(400, "offer_name is required.");
@@ -138,6 +163,7 @@ export const createOffer = async (req, res, next) => {
     const payload = normalizedPayload(req.body);
     const suppliedProductIds = requestedProductIds(req.body);
     const productIds = payload.scope === "select_products" ? await ownedProducts(req.seller.id, suppliedProductIds ?? []) : [];
+    await assertNoActiveOfferConflict(req.seller.id, payload.scope, productIds);
     const { data: offer, error } = await supabase.from(offersTable).insert({ ...payload, seller_id: req.seller.id }).select().single();
     if (error) throw error;
     try {
@@ -162,6 +188,7 @@ export const updateOffer = async (req, res, next) => {
     const productIds = payload.scope === "select_products"
       ? await ownedProducts(req.seller.id, requestedIds ?? currentIdsByOffer.get(existing.id) ?? [])
       : [];
+    if (existing.is_active) await assertNoActiveOfferConflict(req.seller.id, payload.scope, productIds, existing.id);
     const { data: offer, error } = await supabase.from(offersTable).update(payload).eq("id", existing.id).eq("seller_id", req.seller.id).select().single();
     if (error) throw error;
     const { error: deleteLinksError } = await supabase.from(offerProductsTable).delete().eq("offer_id", existing.id);
@@ -178,6 +205,10 @@ export const toggleOffer = async (req, res, next) => {
     if (findError) throw findError;
     if (!existing) return res.status(404).json({ success: false, message: "Offer not found" });
     if (effectiveStatus(existing) === "Expired") return res.status(409).json({ success: false, message: "Expired offers cannot be enabled or disabled." });
+    if (req.body.isActive) {
+      const currentIdsByOffer = await productIdsForOffers([existing.id]);
+      await assertNoActiveOfferConflict(req.seller.id, existing.scope, currentIdsByOffer.get(existing.id) ?? [], existing.id);
+    }
     const { data: offer, error } = await supabase.from(offersTable).update({ is_active: req.body.isActive }).eq("id", existing.id).eq("seller_id", req.seller.id).select().single();
     if (error) throw error;
     const productIdsByOffer = await productIdsForOffers([offer.id]);

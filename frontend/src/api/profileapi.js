@@ -7,7 +7,7 @@ export async function fetchProfile() {
 }
 
 /**
- * values:  { fullName, email, mobileNumber, alternateNumber }
+ * values:  { fullName, email, mobileNumber, alternateNumber, isSellingActive }
  * options: { imageFile?: File, removeImage?: boolean }
  */
 export async function saveProfile(values, { imageFile, removeImage } = {}) {
@@ -16,10 +16,17 @@ export async function saveProfile(values, { imageFile, removeImage } = {}) {
   body.append('email', values.email);
   body.append('mobileNumber', values.mobileNumber);
   body.append('alternateNumber', values.alternateNumber); // '' clears it
+  body.append('isSellingActive', String(values.isSellingActive));
   if (imageFile) body.append('profileImage', imageFile);
   if (removeImage) body.append('removeProfileImage', 'true');
 
   const { data } = await client.put('/profile', body);
+  invalidateCachedRequests('profile');
+  return data.data;
+}
+
+export async function saveSellingStatus(isSellingActive) {
+  const { data } = await client.put('/profile/selling-status', { isSellingActive });
   invalidateCachedRequests('profile');
   return data.data;
 }

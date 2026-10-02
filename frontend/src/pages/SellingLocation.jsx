@@ -132,39 +132,39 @@ export default function SellingLocation() {
   const visibleCities = activeState ? STATE_CITIES[activeState].filter((city) => matches(city, cityQuery)) : [];
 
   return (
-    <div className="flex max-w-[1100px] flex-col gap-5 pb-8 pt-2">
+    <div className="flex max-w-[1000px] flex-col gap-4 pb-8 pt-1">
       <header>
-        <h1 className="m-0 text-[32px] font-bold text-gray-900">Selling Location</h1>
-        <p className="mb-0 mt-1.5 text-[15px] text-gray-800">Choose the states and cities where you want to sell your products.</p>
+        <h1 className="m-0 text-[24px] font-bold text-gray-900 sm:text-[28px]">Selling Location</h1>
+        <p className="mb-0 mt-1 text-sm text-gray-700">Choose the states and cities where you want to sell your products.</p>
       </header>
 
       {banner && <p className={`m-0 rounded-md px-3 py-2 text-sm ${banner.type === "success" ? "border border-green-200 bg-green-50 text-green-800" : "border border-red-200 bg-red-50 text-red-700"}`} role={banner.type === "error" ? "alert" : "status"}>{banner.text}</p>}
 
       {loading ? <p className="m-0 text-sm text-gray-500">Loading selling locations…</p> : loadFailed ? <button type="button" onClick={loadLocations} className="w-fit rounded border border-gray-900 bg-white px-4 py-2 text-sm font-semibold">Retry</button> : <>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <label className="flex h-[50px] w-full items-center gap-2 rounded border border-gray-200 bg-white px-3 sm:max-w-[740px]">
-          <Search size={18} className="shrink-0 text-gray-500" />
+      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+        <label className="flex h-10 w-full items-center gap-2 rounded border border-gray-200 bg-white px-3 sm:max-w-[640px]">
+          <Search size={15} className="shrink-0 text-gray-500" />
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search"
-            className="w-full border-0 bg-transparent text-lg text-gray-900 placeholder:text-gray-500 focus:outline-none"
+            className="w-full border-0 bg-transparent text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none"
           />
         </label>
         <button
           type="button"
           onClick={openModal}
           disabled={saving}
-          className="flex h-[50px] cursor-pointer items-center justify-center gap-2 rounded border border-amber-300 bg-amber-200 px-6 text-sm font-semibold text-gray-900 hover:bg-amber-300 sm:w-[180px]"
+          className="flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded border border-amber-300 bg-amber-200 px-4 text-xs font-semibold text-gray-900 hover:bg-amber-300 sm:w-[150px]"
         >
           <Plus size={16} /> Add location
         </button>
       </div>
 
-      <section className="rounded-lg border border-gray-200 bg-white px-3 pb-4 pt-3">
-        <div className="flex items-center justify-between border-b border-gray-300 pb-3">
-          <h2 className="m-0 text-[15px] font-bold text-gray-900">Select locations</h2>
+      <section className="rounded-md border border-gray-200 bg-white px-3 pb-3 pt-2.5">
+        <div className="flex items-center justify-between border-b border-gray-300 pb-2.5">
+          <h2 className="m-0 text-sm font-bold text-gray-900">Select locations</h2>
           <span className="text-xs text-gray-500">
             {locations.length} {locations.length === 1 ? "state" : "states"} {totalCities} {totalCities === 1 ? "city" : "cities"}
           </span>
@@ -176,9 +176,9 @@ export default function SellingLocation() {
           </p>
         ) : (
           visibleLocations.map((item) => (
-            <div key={item.state} className="border-b border-gray-100 py-4 last:border-b-0">
+            <div key={item.state} className="border-b border-gray-100 py-3 last:border-b-0">
               <div className="flex items-start justify-between">
-                <span className="text-[15px] text-gray-900">{item.state}</span>
+                <span className="text-sm text-gray-900">{item.state}</span>
                 <button
                   type="button"
                   onClick={() => removeState(item.state)}
@@ -188,10 +188,11 @@ export default function SellingLocation() {
                   Remove
                 </button>
               </div>
-              <ul className="m-0 mt-2 list-none p-0">
-                {item.cities.map((city) => (
-                  <li key={city} className="relative ml-2.5 border-l border-gray-900 py-2.5 pl-4 text-sm text-gray-900">
-                    <span className="absolute -left-[5px] top-3 h-2.5 w-2.5 rounded-full border-2 border-amber-400 bg-white" />
+              <ul className="m-0 mt-1.5 list-none p-0">
+                {item.cities.map((city, index) => (
+                  <li key={city} className="relative ml-2.5 py-1.5 pl-3.5 text-xs text-gray-900">
+                    <span className="absolute -left-[5px] top-2 z-10 h-2.5 w-2.5 rounded-full border-2 border-amber-400 bg-white" />
+                    {index < item.cities.length - 1 && <span aria-hidden="true" className="absolute left-0 top-[13px] z-0 h-7 border-l border-gray-900" />}
                     {city}
                   </li>
                 ))}
@@ -208,22 +209,22 @@ export default function SellingLocation() {
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
           onMouseDown={(event) => event.target === event.currentTarget && closeModal()}
         >
-          <div role="dialog" aria-modal="true" className="flex max-h-[90vh] w-[440px] max-w-full flex-col rounded-xl border border-gray-300 bg-white">
+          <div role="dialog" aria-modal="true" className="flex max-h-[calc(100dvh-2rem)] w-full max-w-[440px] flex-col rounded-xl border border-gray-300 bg-white md:max-h-[90vh]">
             <div className="flex items-start justify-between border-b border-gray-300 px-2.5 pb-2 pt-3">
               <div className="flex items-start gap-2">
                 {step === 2 && (
-                  <button type="button" onClick={() => setStep(1)} aria-label="Back" className="mt-0.5 cursor-pointer border-0 bg-transparent p-0 text-gray-900">
+                  <button type="button" onClick={() => setStep(1)} aria-label="Back" className="mt-0.5 grid h-10 w-10 shrink-0 cursor-pointer place-items-center border-0 bg-transparent p-0 text-gray-900 sm:h-auto sm:w-auto">
                     <ChevronLeft size={20} />
                   </button>
                 )}
                 <div>
-                  <h3 className="m-0 text-lg font-semibold text-gray-900">
+                  <h3 className="m-0 text-base font-semibold text-gray-900 sm:text-lg">
                     {step === 1 ? "Select State" : `Select City${activeState ? ` · ${activeState}` : ""}`}
                   </h3>
                   <p className="m-0 text-sm text-gray-900">Step {step} of 2</p>
                 </div>
               </div>
-              <button type="button" onClick={closeModal} aria-label="Close" className="cursor-pointer border-0 bg-transparent p-1 text-gray-900">
+              <button type="button" onClick={closeModal} aria-label="Close" className="grid h-10 w-10 shrink-0 cursor-pointer place-items-center border-0 bg-transparent p-1 text-gray-900 sm:h-auto sm:w-auto">
                 <X size={16} />
               </button>
             </div>
@@ -249,7 +250,7 @@ export default function SellingLocation() {
                           <button
                             type="button"
                             onClick={() => pickState(name)}
-                            className="flex w-full cursor-pointer items-center justify-between border-0 bg-transparent px-0 py-[5px] text-left text-[15px] text-gray-900 hover:bg-amber-50"
+                            className="flex w-full cursor-pointer items-center justify-between border-0 bg-transparent px-0 py-2 text-left text-[15px] text-gray-900 hover:bg-amber-50 sm:py-[5px]"
                           >
                             {name}
                             <ChevronRight size={14} />
@@ -282,11 +283,11 @@ export default function SellingLocation() {
               </div>
 
               {step === 2 && (
-                <div className="mt-3 flex justify-end gap-4">
+                <div className="mt-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-4">
                   <button
                     type="button"
                     onClick={closeModal}
-                    className="h-10 w-[150px] cursor-pointer rounded border border-gray-900 bg-white text-base text-gray-900"
+                    className="h-10 w-full cursor-pointer rounded border border-gray-900 bg-white text-base text-gray-900 sm:w-[150px]"
                   >
                     Cancel
                   </button>
@@ -294,7 +295,7 @@ export default function SellingLocation() {
                     type="button"
                     onClick={saveModal}
                     disabled={!selectedCities.length || saving}
-                    className="h-10 w-[150px] cursor-pointer rounded border border-green-700 bg-green-700 text-base text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    className="h-10 w-full cursor-pointer rounded border border-green-700 bg-green-700 text-base text-white disabled:cursor-not-allowed disabled:opacity-50 sm:w-[150px]"
                   >
                     {saving ? "Saving..." : "Save"}
                   </button>

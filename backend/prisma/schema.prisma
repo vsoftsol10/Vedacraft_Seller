@@ -61,6 +61,7 @@ model SellerApplication {
   mobileNumber    String?  @map("mobile_number")
   alternateNumber String?  @map("alternate_number")
   profileImage    String?  @map("profile_image")
+  isSellingActive Boolean  @default(true) @map("is_selling_active")
   updatedAt       DateTime @map("updated_at")
   sellingLocations SellerSellingLocation[]
 

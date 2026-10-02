@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Upload, X } from 'lucide-react';
-import { fetchProfile, saveProfile, parseApiError } from '../api/profileapi';
+import { fetchProfile, saveProfile, saveSellingStatus, parseApiError } from '../api/profileapi';
 
-const EMPTY = { fullName: '', email: '', mobileNumber: '', alternateNumber: '' };
+const EMPTY = { fullName: '', email: '', mobileNumber: '', alternateNumber: '', isSellingActive: true };
 const FIELDS = Object.keys(EMPTY);
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg'];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_RE = /^[6-9]\d{9}$/;
-const INPUT = "h-[58px] rounded-md border border-[#d9d9d9] bg-white px-3.5 text-[#111] outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-[#b5b5b5] focus-visible:border-[#279a3a] focus-visible:shadow-[0_0_0_3px_rgba(39,154,58,.18)]";
+const INPUT = "h-12 rounded-md border border-[#d9d9d9] bg-white px-3 text-sm text-[#111] outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-[#b5b5b5] focus-visible:border-[#279a3a] focus-visible:shadow-[0_0_0_3px_rgba(39,154,58,.18)]";
 const FIELD_ERROR_INPUT = "border-[#c62828] focus-visible:shadow-[0_0_0_3px_rgba(198,40,40,.16)]";
 
 // Mirrors the backend rules so people get feedback before the request is sent.
@@ -36,12 +36,13 @@ const toFormValues = (data) => ({
   email: data?.email ?? '',
   mobileNumber: data?.mobileNumber ?? '',
   alternateNumber: data?.alternateNumber ?? '',
+  isSellingActive: data?.isSellingActive !== false,
 });
 
 function Field({ id, label, optional, error, ...inputProps }) {
   return (
-    <div className="flex flex-col gap-2">
-      <label className="text-[1.1rem] font-medium" htmlFor={id}>
+    <div className="flex flex-col gap-1.5">
+      <label className="text-sm font-medium" htmlFor={id}>
         {label}
         {optional && <span className="font-normal text-[#9a9a9a]"> (optional)</span>}
       </label>
@@ -72,6 +73,7 @@ export default function Profile() {
   const [touched, setTouched] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingSellingStatus, setSavingSellingStatus] = useState(false);
   const [banner, setBanner] = useState(null); // { type: 'success' | 'error', text }
   const fileInputRef = useRef(null);
 
@@ -128,6 +130,23 @@ export default function Profile() {
     const { name } = e.target;
     setTouched((prev) => ({ ...prev, [name]: true }));
     setErrors((prev) => ({ ...prev, [name]: validate(form)[name] }));
+  }
+
+  async function toggleSellingStatus() {
+    if (savingSellingStatus || saving) return;
+    const nextStatus = !form.isSellingActive;
+    setForm((prev) => ({ ...prev, isSellingActive: nextStatus }));
+    setBanner(null);
+    setSavingSellingStatus(true);
+    try {
+      const data = await saveSellingStatus(nextStatus);
+      setSaved((prev) => ({ ...prev, isSellingActive: data.isSellingActive }));
+    } catch (err) {
+      setForm((prev) => ({ ...prev, isSellingActive: !nextStatus }));
+      setBanner({ type: 'error', text: parseApiError(err).message });
+    } finally {
+      setSavingSellingStatus(false);
+    }
   }
 
   function handleFile(e) {
@@ -202,9 +221,9 @@ export default function Profile() {
   }
 
   return (
-    <div className="max-w-[1160px] pb-12 pt-2 text-[#111]">
-      <h1 className="mb-1.5 mt-0 text-[2.25rem] font-bold leading-[1.15] max-[768px]:text-[1.75rem]">Profile</h1>
-      <p className="mb-6 mt-0 text-[0.95rem]">Manage your personal and store profile information.</p>
+    <div className="max-w-[1100px] pb-8 pt-1 text-[#111]">
+      <h1 className="mb-1.5 mt-0 text-[2rem] font-bold leading-[1.15] max-[768px]:text-[1.75rem]">Profile</h1>
+      <p className="mb-5 mt-0 text-[0.9rem]">Manage your personal and store profile information.</p>
 
       {banner && (
         <div
@@ -219,7 +238,7 @@ export default function Profile() {
         <p className="text-[#9a9a9a]">Loading your profile…</p>
       ) : (
         <form className="profile-form" onSubmit={handleSubmit} noValidate>
-          <div className="grid grid-cols-2 gap-x-5 gap-y-6 max-[768px]:grid-cols-1">
+          <div className="grid grid-cols-2 gap-x-5 gap-y-4 max-[768px]:grid-cols-1">
             <Field
               id="fullName"
               label="Full Name"
@@ -268,10 +287,10 @@ export default function Profile() {
             />
           </div>
 
-          <div className="relative mt-8 w-40">
+          <div className="relative mt-6 w-36">
             <button
               type="button"
-              className={`flex h-[138px] w-40 cursor-pointer flex-col items-center justify-center gap-0.5 overflow-hidden rounded-lg border border-[#d9d9d9] bg-white p-2 text-[0.7rem] leading-[1.4] text-[#9a9a9a] transition-[border-color] duration-150 hover:border-[#279a3a] focus-visible:border-[#279a3a] focus-visible:outline-none${displayedImage ? ' p-0' : ''}`}
+              className={`flex h-32 w-36 cursor-pointer flex-col items-center justify-center gap-0.5 overflow-hidden rounded-lg border border-[#d9d9d9] bg-white p-2 text-[0.7rem] leading-[1.4] text-[#9a9a9a] transition-[border-color] duration-150 hover:border-[#279a3a] focus-visible:border-[#279a3a] focus-visible:outline-none${displayedImage ? ' p-0' : ''}`}
               onClick={() => fileInputRef.current?.click()}
               aria-label={displayedImage ? 'Change profile image' : 'Upload profile image'}
             >
@@ -306,10 +325,35 @@ export default function Profile() {
             {errors.profileImage && <p className="mt-2 max-w-[260px] w-max text-[0.85rem] text-[#c62828]">{errors.profileImage}</p>}
           </div>
 
-          <div className="mt-14 flex justify-end gap-5 max-[768px]:mt-10 max-[768px]:flex-col-reverse">
+          <section className="mt-8 max-w-[520px]" aria-labelledby="selling-status-heading">
+            <div className="flex items-center justify-between gap-5 rounded-lg border border-[#e3e3e3] bg-white px-4 py-3.5">
+              <div>
+                <h2 id="selling-status-heading" className="m-0 text-base font-semibold">Selling Status</h2>
+                <p className="mb-0 mt-1 text-sm text-[#666]">
+                  {form.isSellingActive ? 'Active — your store is accepting new orders.' : 'Inactive — your store is not accepting new orders.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={form.isSellingActive}
+                onClick={toggleSellingStatus}
+                aria-label={form.isSellingActive ? 'Set selling status to inactive' : 'Set selling status to active'}
+                disabled={savingSellingStatus || saving}
+                className={`relative h-6 w-11 rounded-full border-0 p-0 transition-colors focus-visible:outline focus-visible:outline-3 focus-visible:outline-[rgba(39,154,58,.4)] focus-visible:outline-offset-2 disabled:cursor-wait disabled:opacity-60 ${form.isSellingActive ? 'bg-[#55bd32]' : 'bg-[#999]'} ${savingSellingStatus || saving ? '' : 'cursor-pointer'}`}
+              >
+                <span
+                  className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${form.isSellingActive ? 'translate-x-5' : 'translate-x-0'}`}
+                  aria-hidden="true"
+                />
+              </button>
+            </div>
+          </section>
+
+          <div className="mt-10 flex justify-end gap-3 max-[768px]:mt-8 max-[768px]:flex-col-reverse">
             <button
               type="button"
-              className="h-[55px] w-[220px] cursor-pointer rounded border border-[#111] bg-white text-[1.2rem] font-medium text-[#111] transition-[background-color,opacity] duration-150 enabled:hover:bg-[#f4f4f4] focus-visible:outline-3 focus-visible:outline-[rgba(39,154,58,.4)] focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 max-[768px]:w-full"
+              className="h-12 w-[180px] cursor-pointer rounded border border-[#111] bg-white text-base font-medium text-[#111] transition-[background-color,opacity] duration-150 enabled:hover:bg-[#f4f4f4] focus-visible:outline-3 focus-visible:outline-[rgba(39,154,58,.4)] focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 max-[768px]:w-full"
               onClick={handleCancel}
               disabled={!dirty || saving}
             >
@@ -317,7 +361,7 @@ export default function Profile() {
             </button>
             <button
               type="submit"
-              className="h-[55px] w-[220px] cursor-pointer rounded border border-[#279a3a] bg-[#279a3a] text-[1.2rem] font-medium text-white transition-[background-color,opacity] duration-150 enabled:hover:bg-[#1f7f2f] focus-visible:outline-3 focus-visible:outline-[rgba(39,154,58,.4)] focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 max-[768px]:w-full"
+              className="h-12 w-[180px] cursor-pointer rounded border border-[#279a3a] bg-[#279a3a] text-base font-medium text-white transition-[background-color,opacity] duration-150 enabled:hover:bg-[#1f7f2f] focus-visible:outline-3 focus-visible:outline-[rgba(39,154,58,.4)] focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 max-[768px]:w-full"
               disabled={!dirty || saving}
             >
               {saving ? 'Saving…' : 'Save'}

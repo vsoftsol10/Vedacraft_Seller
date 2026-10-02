@@ -103,6 +103,26 @@ const productId = async () => {
   throw new Error("Could not generate a unique product ID");
 };
 
+// SKU format: first three letters of the product name, followed by a
+// zero-padded sequence (for example, "Neem Soap" becomes "NEE-0001").
+const skuPrefixFor = (productName) => {
+  const letters = String(productName ?? "").toUpperCase().replace(/[^A-Z]/g, "");
+  return letters.slice(0, 3).padEnd(3, "X");
+};
+
+const nextSkuFor = async (productName) => {
+  const prefix = skuPrefixFor(productName);
+  const { data, error } = await supabase.from(table).select("sku").ilike("sku", `${prefix}-%`);
+  if (error) throw error;
+
+  const largestSequence = (data ?? []).reduce((largest, { sku }) => {
+    const match = new RegExp(`^${prefix}-(\\d+)$`, "i").exec(sku ?? "");
+    return match ? Math.max(largest, Number(match[1])) : largest;
+  }, 0);
+
+  return `${prefix}-${String(largestSequence + 1).padStart(4, "0")}`;
+};
+
 const productPayload = (body, existing = {}, images = {}) => {
   const stockQuantity = body.stockQuantity === undefined ? existing.stock_quantity : Number(body.stockQuantity || 0);
   const lowStockAlert = body.lowStockAlert === undefined ? existing.low_stock_alert : Number(body.lowStockAlert || 5);
@@ -129,8 +149,16 @@ export const createProduct = async (req, res, next) => {
     }
     const id = await productId();
     const images = await uploadProductImages(req.files, id);
-    const payload = { ...productPayload(req.body, {}, images), product_id: id, seller_id: req.seller.id };
-    const { data, error } = await supabase.from(table).insert(payload).select().single();
+    let data;
+    let error;
+    // Generate this on the server rather than trusting the preview in the form.
+    // Retry if another request claimed the same next sequence between lookup and insert.
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const sku = await nextSkuFor(req.body.productName);
+      const payload = { ...productPayload({ ...req.body, sku }, {}, images), product_id: id, seller_id: req.seller.id };
+      ({ data, error } = await supabase.from(table).insert(payload).select().single());
+      if (!error || !(error.code === "23505" && /sku/i.test(error.message ?? ""))) break;
+    }
     if (error) {
       await removeProductImages(images.paths);
       throw error;
@@ -154,9 +182,12 @@ export const getProducts = async (req, res, next) => {
     let query = supabase.from(table).select("*", { count: "exact" }).eq("seller_id", req.seller.id).order("created_at", { ascending: false });
     if (req.query.search) {
       const value = req.query.search.replace(/[%_,()]/g, "");
-      query = query.or(`product_name.ilike.%${value}%,product_id.ilike.%${value}%`);
+      query = query.or(`product_name.ilike.%${value}%,product_id.ilike.%${value}%,sku.ilike.%${value}%`);
     }
     if (req.query.category) query = query.eq("category", req.query.category);
+    if (["active", "inactive"].includes(req.query.isActive)) {
+      query = query.eq("is_active", req.query.isActive === "active");
+    }
     if (req.query.stockStatus) query = query.eq("stock_status", req.query.stockStatus);
     const { data, count, error } = await query.range((page - 1) * limit, page * limit - 1);
     if (error) throw error;
@@ -228,6 +259,45 @@ export const updateProductStatus = async (req, res, next) => {
     if (error) throw error;
     if (!data) return res.status(404).json({ success: false, message: "Product not found" });
     return res.json({ success: true, data: toApiProduct(data) });
+  } catch (error) { return next(error); }
+};
+
+export const getNextProductSku = async (req, res, next) => {
+  try {
+    if (!req.query.productName?.trim()) {
+      return res.status(400).json({ success: false, message: "productName is required" });
+    }
+    return res.json({ success: true, data: { sku: await nextSkuFor(req.query.productName) } });
+  } catch (error) { return next(error); }
+};
+
+export const bulkAddStock = async (req, res, next) => {
+  try {
+    const updates = Array.isArray(req.body?.updates) ? req.body.updates : [];
+    if (!updates.length) return res.status(400).json({ success: false, message: "Select at least one product and enter a quantity." });
+
+    const result = [];
+    for (const update of updates) {
+      const quantity = Number(update.quantity);
+      if (!update.id || !Number.isInteger(quantity) || quantity <= 0) {
+        return res.status(400).json({ success: false, message: "Each stock quantity must be a whole number greater than zero." });
+      }
+      const { data: existing, error: findError } = await supabase
+        .from(table).select("*").eq("id", update.id).eq("seller_id", req.seller.id).maybeSingle();
+      if (findError) throw findError;
+      if (!existing) return res.status(404).json({ success: false, message: "One of the selected products was not found." });
+
+      const stockQuantity = Number(existing.stock_quantity || 0) + quantity;
+      const { data, error } = await supabase
+        .from(table)
+        .update({ stock_quantity: stockQuantity, stock_status: stockStatusFor(stockQuantity, existing.low_stock_alert) })
+        .eq("id", existing.id)
+        .select()
+        .single();
+      if (error) throw error;
+      result.push(toApiProduct(data));
+    }
+    return res.json({ success: true, data: result });
   } catch (error) { return next(error); }
 };
 export const deleteProduct = async (req, res, next) => {
