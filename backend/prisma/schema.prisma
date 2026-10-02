@@ -41,6 +41,7 @@ model Product {
 model Notification {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId    String   @map("user_id") @db.Uuid
+  audience  String   @default("seller")
   type      String   @default("order")
   title     String
   message   String

@@ -10,7 +10,7 @@ const sellerUserId = async (sellerId) => {
 };
 
 const notificationExists = async (userId, type, message, orderId = null) => {
-  let query = supabase.from(notificationsTable).select("id").eq("user_id", userId).eq("type", type).eq("message", message).limit(1);
+  let query = supabase.from(notificationsTable).select("id").eq("user_id", userId).eq("audience", "seller").eq("type", type).eq("message", message).limit(1);
   query = orderId ? query.eq("order_id", orderId) : query.is("order_id", null);
   const { data, error } = await query;
   if (error) throw error;
@@ -24,6 +24,7 @@ export const createSellerNotification = async (sellerId, notification, { markRea
   if (deduplicate && await notificationExists(userId, notification.type, message, notification.orderId)) return null;
   const { data, error } = await supabase.from(notificationsTable).insert({
     user_id: userId,
+    audience: "seller",
     type: notification.type,
     title: notification.title,
     message,
@@ -80,7 +81,7 @@ export const recordSellerLogin = async (sellerId) => {
   const userId = await sellerUserId(sellerId);
   if (!userId) return;
   const { data: previousLogins, error } = await supabase.from(notificationsTable)
-    .select("created_at").eq("user_id", userId).eq("type", "login").order("created_at", { ascending: false }).limit(1);
+    .select("created_at").eq("user_id", userId).eq("audience", "seller").eq("type", "login").order("created_at", { ascending: false }).limit(1);
   if (error) throw error;
   await createSellerNotification(sellerId, {
     type: "login",
