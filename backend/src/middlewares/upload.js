@@ -35,3 +35,4 @@ export const bulkProductUpload = multer({
   { name: "sheet", maxCount: 1 },
   { name: "images", maxCount: 200 },
 ]);
+

@@ -7,6 +7,16 @@ const productsTable = "seller_products";
 const apiError = (status, message) => Object.assign(new Error(message), { status });
 const has = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
 const cleanText = (value) => String(value ?? "").trim().replace(/\s+/g, " ");
+const kolkataDateFormatter = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" });
+const dateOnlyInKolkata = (value) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const parts = Object.fromEntries(kolkataDateFormatter.formatToParts(date).filter(({ type }) => type !== "literal").map(({ type, value: part }) => [type, part]));
+  return `${parts.year}-${parts.month}-${parts.day}`;
+};
+const todayInKolkata = () => dateOnlyInKolkata(new Date());
+const isDateOnly = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value ?? "")) && !Number.isNaN(new Date(`${value}T00:00:00Z`).getTime());
+const asKolkataDateTime = (date, endOfDay = false) => new Date(`${date}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}+05:30`).toISOString();
 
 const normalizeDiscountType = (value) => {
   const type = String(value ?? "").trim().toLowerCase();
@@ -30,7 +40,8 @@ const nullableDate = (value, field) => {
 };
 
 const effectiveStatus = (offer) => {
-  if (offer.end_date && new Date(offer.end_date).getTime() <= Date.now()) return "Expired";
+  if (offer.end_date && dateOnlyInKolkata(offer.end_date) < todayInKolkata()) return "Expired";
+  if (offer.start_date && dateOnlyInKolkata(offer.start_date) > todayInKolkata()) return "Upcoming";
   return offer.is_active ? "Active" : "Inactive";
 };
 
@@ -173,6 +184,86 @@ export const createOffer = async (req, res, next) => {
       throw error;
     }
     return res.status(201).json({ success: true, data: toApiOffer(offer, productIds) });
+  } catch (error) { return next(error); }
+};
+
+export const reuseOffer = async (req, res, next) => {
+  try {
+    const { startDate, endDate } = req.body ?? {};
+    const today = todayInKolkata();
+    if (!isDateOnly(startDate)) throw apiError(400, "Start date is required and must be a valid date.");
+    if (!isDateOnly(endDate)) throw apiError(400, "End date is required and must be a valid date.");
+    if (startDate < today) throw apiError(400, "Start date cannot be in the past.");
+    if (endDate < startDate) throw apiError(400, "End date must be on or after the start date.");
+    if (endDate <= today) throw apiError(400, "End date must be in the future.");
+
+    const { data: existing, error: findError } = await supabase.from(offersTable).select("*").eq("id", req.params.id).eq("seller_id", req.seller.id).maybeSingle();
+    if (findError) throw findError;
+    if (!existing) return res.status(404).json({ success: false, message: "Offer not found" });
+    if (effectiveStatus(existing) !== "Expired") throw apiError(400, "Only expired offers can be reused");
+
+    const currentIdsByOffer = await productIdsForOffers([existing.id]);
+    const sourceProductIds = currentIdsByOffer.get(existing.id) ?? [];
+    let productIds = [];
+    if (existing.scope === "select_products") {
+      const { data: availableProducts, error: productsError } = await supabase.from(productsTable).select("id").eq("seller_id", req.seller.id).in("id", sourceProductIds);
+      if (productsError) throw productsError;
+      productIds = (availableProducts ?? []).map((product) => product.id);
+      if (!productIds.length) throw apiError(400, "None of this offer's selected products are available to reuse.");
+    }
+
+    const isActive = startDate <= today;
+    if (isActive) await assertNoActiveOfferConflict(req.seller.id, existing.scope, productIds);
+    const payload = {
+      seller_id: req.seller.id,
+      offer_name: existing.offer_name,
+      offer_description: existing.offer_description,
+      discount_type: existing.discount_type,
+      discount_value: existing.discount_value,
+      scope: existing.scope,
+      start_date: asKolkataDateTime(startDate),
+      end_date: asKolkataDateTime(endDate, true),
+      is_active: isActive,
+    };
+    const { data: offer, error } = await supabase.from(offersTable).insert(payload).select().single();
+    if (error) throw error;
+    try {
+      await saveOfferProducts(offer.id, productIds);
+    } catch (saveError) {
+      await supabase.from(offersTable).delete().eq("id", offer.id).eq("seller_id", req.seller.id);
+      throw saveError;
+    }
+    return res.status(201).json({ success: true, data: toApiOffer(offer, productIds) });
+  } catch (error) { return next(error); }
+};
+
+export const extendOffer = async (req, res, next) => {
+  try {
+    const { endDate } = req.body ?? {};
+    if (!isDateOnly(endDate)) throw apiError(400, "End date is required and must be a valid date.");
+
+    const { data: existing, error: findError } = await supabase.from(offersTable).select("*").eq("id", req.params.id).eq("seller_id", req.seller.id).maybeSingle();
+    if (findError) throw findError;
+    if (!existing) return res.status(404).json({ success: false, message: "Offer not found" });
+
+    const today = todayInKolkata();
+    const currentStartDate = dateOnlyInKolkata(existing.start_date);
+    const currentEndDate = dateOnlyInKolkata(existing.end_date);
+    if (!existing.is_active || !currentStartDate || !currentEndDate || currentStartDate > today || currentEndDate < today) {
+      throw apiError(400, "Only active offers can be extended");
+    }
+    if (endDate <= currentEndDate) throw apiError(400, "End date must be later than the current end date.");
+
+    const { data: offer, error } = await supabase
+      .from(offersTable)
+      .update({ end_date: asKolkataDateTime(endDate, true) })
+      .eq("id", existing.id)
+      .eq("seller_id", req.seller.id)
+      .select()
+      .single();
+    if (error) throw error;
+    const productIdsByOffer = await productIdsForOffers([offer.id]);
+    return res.json({ success: true, data: toApiOffer(offer, productIdsByOffer.get(offer.id) ?? []) });
   } catch (error) { return next(error); }
 };
 

@@ -8,6 +8,7 @@
     "start": "node src/server.js"
   },
   "dependencies": {
+    "@google-cloud/translate": "^10.1.1",
     "@prisma/client": "^5.19.1",
     "@supabase/supabase-js": "^2.45.4",
     "bullmq": "^5.12.12",

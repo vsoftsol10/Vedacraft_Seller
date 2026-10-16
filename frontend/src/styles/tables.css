@@ -1,0 +1,62 @@
+:root {
+  --vc-table-header-bg: #2b7a1d;
+  --vc-table-header-color: #fff;
+  --vc-table-border: #e5e7eb;
+  --vc-table-divider: #f0f2f1;
+  --vc-table-hover: #f4faf3;
+  --vc-table-text: #374151;
+  --vc-table-header-size: 13px;
+  --vc-table-body-size: 14px;
+  --vc-table-header-padding: 12px 16px;
+  --vc-table-cell-padding: 14px 16px;
+  --vc-table-radius: 12px;
+}
+
+.vc-table-wrapper {
+  overflow-x: auto;
+  border: 1px solid var(--vc-table-border);
+  border-radius: var(--vc-table-radius);
+  background: #fff;
+}
+
+.vc-table,
+table:not(.items) {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--vc-table-text);
+  font-size: var(--vc-table-body-size);
+}
+
+.vc-table thead th,
+table:not(.items) thead th {
+  background: var(--vc-table-header-bg) !important;
+  padding: var(--vc-table-header-padding) !important;
+  color: var(--vc-table-header-color) !important;
+  font-size: var(--vc-table-header-size) !important;
+  font-weight: 600 !important;
+  line-height: 20px;
+  vertical-align: middle;
+}
+
+.vc-table thead th:first-child,
+table:not(.items) thead th:first-child { border-top-left-radius: 8px; }
+.vc-table thead th:last-child,
+table:not(.items) thead th:last-child { border-top-right-radius: 8px; }
+
+.vc-table tbody td,
+table:not(.items) tbody td {
+  border-bottom: 1px solid var(--vc-table-divider);
+  padding: var(--vc-table-cell-padding) !important;
+  font-size: var(--vc-table-body-size);
+  line-height: 20px;
+  vertical-align: middle;
+}
+
+.vc-table tbody tr:last-child td,
+table:not(.items) tbody tr:last-child td { border-bottom: 0; }
+.vc-table tbody tr:hover,
+table:not(.items) tbody tr:hover { background: var(--vc-table-hover); }
+.vc-table .vc-table-empty,
+table:not(.items) .vc-table-empty { padding: 32px 16px !important; text-align: center; }
+.vc-table .vc-table-badge { display: inline-flex; min-height: 24px; align-items: center; padding: 4px 10px; font-size: 12px; line-height: 16px; font-weight: 600; }
+.vc-table .vc-table-action { display: inline-flex; min-height: 32px; align-items: center; justify-content: center; padding: 6px 12px; font-size: 12px; line-height: 16px; font-weight: 600; }

@@ -412,7 +412,7 @@
 import { useCallback, useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Plus, Upload, Package, IndianRupee, Box, Star, MoreVertical, Eye, Pencil, Trash2, Check, X, ChevronDown } from "lucide-react";
-import { deleteProduct, getProductCategories, getProducts, getProductStats ,updateProductStatus} from "../../api/productapi";
+import { deleteProduct, getProductCategories, getProducts, getProductStats, translateMissingProducts, updateProductStatus } from "../../api/productapi";
 import ProductDetails from "./ProductDetails";
 import BulkUploadProducts from "./Bulkproductupload";
 import BulkQuantityUpdate from "./BulkQuantityUpdate";
@@ -457,12 +457,12 @@ const FILTER_CHIP =
 const CLEAR_FILTERS =
   "cursor-pointer border-0 bg-transparent px-0.5 py-[5px] text-[13px] font-semibold text-[#b76b04] hover:underline";
 
-const TABLE_CARD = "rounded-xl border border-[#eee] bg-white overflow-x-auto";
-const TABLE = "w-full min-w-[760px] border-collapse";
-const TH = "border-b border-[#eee] px-4 py-3.5 text-left text-[13px] text-[#555]";
-const TD_COMMON = "border-b border-[#f5f5f5] text-[14px]";
-const TD = `${TD_COMMON} px-4 py-3.5`;
-const TD_EMPTY = `${TD_COMMON} p-8 text-center text-[#999]`;
+const TABLE_CARD = "vc-table-wrapper";
+const TABLE = "vc-table min-w-[760px] text-left";
+const TH = "text-left";
+const TD_COMMON = "";
+const TD = TD_COMMON;
+const TD_EMPTY = "vc-table-empty text-[#999]";
 
 // Stock-status badge styles, shown in the Stock column instead of a date.
 const STOCK_BADGE_BASE = "inline-flex items-center rounded-full px-2.5 py-1 text-[12px] font-semibold";
@@ -474,7 +474,7 @@ const STOCK_BADGE_STYLES = {
 const STOCK_STATUS_ORDER = ["Low Stock", "In Stock", "Out of Stock"];
 
 // "action-cell" is also a JS hook: the outside-click handler uses closest(".action-cell").
-const ACTION_CELL = "action-cell relative w-[52px] border-b border-[#f5f5f5] px-4 py-3.5 text-[14px]";
+const ACTION_CELL = "action-cell relative w-[52px]";
 const ACTION_TRIGGER =
   "grid cursor-pointer place-items-center rounded-md border-0 bg-transparent p-1.5 text-[#555] hover:bg-[#f1f5f1]";
 const ACTION_MENU =
@@ -492,6 +492,7 @@ export default function ProductsList() {
   const [category, setCategory] = useState("");
   const [activityStatus, setActivityStatus] = useState("");
   const [stockStatus, setStockStatus] = useState("");
+  const [translationBusy, setTranslationBusy] = useState(false);
   const [openMenu, setOpenMenu] = useState(null);
   const toolbarRef = useRef(null);
   const [loading, setLoading] = useState(true);
@@ -599,6 +600,8 @@ export default function ProductsList() {
     setOpenMenu(null);
   };
 
+  const handleTranslateMissing = async () => { if (!window.confirm("Translate missing product languages for up to 50 products?")) return; try { setTranslationBusy(true); await translateMissingProducts(); await loadData(); } catch (error) { setActionError(error?.response?.data?.message || "Unable to translate missing products"); } finally { setTranslationBusy(false); } };
+
   const clearFilters = () => {
     setCategory("");
     setActivityStatus("");
@@ -657,6 +660,7 @@ const handleToggleStatus = async (product) => {
           <p className={PAGE_SUBTITLE}>Manage your products, inventory and pricing all in one place</p>
         </div>
         <div className="flex gap-2.5">
+          <button type="button" className={BULK_ADD_BTN} disabled={translationBusy} onClick={handleTranslateMissing}>Translate missing</button>
           <div className="relative flex-1 sm:flex-none" ref={bulkActionRef}>
             <button type="button" className={BULK_ADD_BTN} onClick={() => setBulkActionOpen((open) => !open)} aria-expanded={bulkActionOpen}>
               <Upload size={18} /> Bulk Action <ChevronDown size={17} className={bulkActionOpen ? "rotate-180 transition-transform" : "transition-transform"} />

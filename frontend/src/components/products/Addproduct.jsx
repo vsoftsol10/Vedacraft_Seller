@@ -401,17 +401,17 @@
 // }
 
 // src/components/products/Addproduct.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Plus, Upload } from "lucide-react";
-import { createProduct, getNextProductSku, getProductById, getProductCategories, updateProduct } from "../../api/productapi";
+import { createProduct, getNextProductSku, getProductById, getProductCategories, retryProductTranslations, updateProduct } from "../../api/productapi";
 import { FORM_ERROR_BANNER } from "../../constants/ui";
 
 /* ---------- Tailwind class constants ---------- */
 const PAGE = "max-w-[1100px] mx-auto px-4 sm:px-0";
 const BACK_LINK =
   "sticky top-[68px] z-10 mb-5 flex w-full cursor-pointer items-center gap-2 border-b border-[#ececec] bg-[#fafafa] py-4 text-[17px] sm:text-[20px] font-bold shadow-[0_8px_14px_-18px_rgba(0,0,0,0.45)]";
-const FORM = "pb-[88px]";
+const FORM = "pb-[112px]";
 
 const CARD = "mb-5 rounded-xl border border-[#eee] bg-white p-4 sm:p-6";
 const CARD_TITLE = "mb-4 text-[16px]";
@@ -468,7 +468,7 @@ const initialState = {
   howToUse: [""],
   careInstruction: [""],
 };
-
+const LANGUAGE_OPTIONS = [{ code: "en", label: "English" }, { code: "ta", label: "Tamil" }, { code: "hi", label: "Hindi" }];
 // New products are stored as JSON lists. The fallback also keeps products
 // created before this change editable (their text becomes one or more entries).
 const listFromValue = (value, fallbackCount = 1) => {
@@ -496,10 +496,22 @@ export default function AddProduct() {
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState("");
   const [categories, setCategories] = useState([]);
+  const [primaryLanguage, setPrimaryLanguage] = useState("en");
+  const [translationLanguage, setTranslationLanguage] = useState("en");
+  const [translationMeta, setTranslationMeta] = useState({});
+  const [translationNotice, setTranslationNotice] = useState("");
+  const submittingRef = useRef(false);
+  const dirtyRef = useRef(false);
+
+  useEffect(() => {
+    const warn = (event) => { if (dirtyRef.current && !submittingRef.current) { event.preventDefault(); event.returnValue = ""; } };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, []);
 
   useEffect(() => {
     if (!id) return;
-    getProductById(id).then(({ data: product }) => {
+    getProductById(id).then(({ data: product, translations: productTranslations = [] }) => {
       setForm({
         productName: product.productName ?? "", category: product.category ?? "", subCategory: product.subCategory ?? "",
         material: product.material ?? "", ...weightFields(product.weight), description: product.description ?? "",
@@ -510,6 +522,8 @@ export default function AddProduct() {
         howToUse: listFromValue(product.usage?.howToUse), careInstruction: listFromValue(product.usage?.careInstruction),
       });
       setCoverPreview(product.images?.cover ?? null);
+      setPrimaryLanguage(product.primaryLanguage || "en");
+      setTranslationMeta(Object.fromEntries(productTranslations.map((translation) => [translation.language, translation])));
       setAdditionalPreviews([...(product.images?.additional ?? []), null, null, null, null].slice(0, 4));
     }).catch((err) => setServerError(err?.response?.data?.message || "Unable to load product"));
   }, [id]);
@@ -546,21 +560,29 @@ export default function AddProduct() {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => ({ ...prev, [name]: undefined }));
+    dirtyRef.current = true;
+  };
+  const changePrimaryLanguage = (nextLanguage) => {
+    dirtyRef.current = true;
+    setPrimaryLanguage(nextLanguage);
   };
 
   const updateListEntry = (field, index, value) => {
+    dirtyRef.current = true;
     setForm((previous) => ({ ...previous, [field]: previous[field].map((entry, entryIndex) => entryIndex === index ? value : entry) }));
   };
 
-  const addListEntry = (field) => setForm((previous) => ({ ...previous, [field]: [...previous[field], ""] }));
+  const addListEntry = (field) => { dirtyRef.current = true; setForm((previous) => ({ ...previous, [field]: [...previous[field], ""] })); };
 
   const removeListEntry = (field, index) => {
+    dirtyRef.current = true;
     setForm((previous) => ({ ...previous, [field]: previous[field].length > 1 ? previous[field].filter((_, entryIndex) => entryIndex !== index) : previous[field] }));
   };
 
   const handleCoverChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    dirtyRef.current = true;
     setCoverImage(file);
     setCoverPreview(URL.createObjectURL(file));
     setErrors((prev) => ({ ...prev, images: undefined }));
@@ -569,6 +591,7 @@ export default function AddProduct() {
   const handleAdditionalChange = (index, e) => {
     const file = e.target.files[0];
     if (!file) return;
+    dirtyRef.current = true;
     setAdditionalImages((prev) => {
       const next = [...prev];
       next[index] = file;
@@ -615,6 +638,7 @@ export default function AddProduct() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submittingRef.current) return;
     setServerError("");
     if (!validate()) return;
 
@@ -622,26 +646,29 @@ export default function AddProduct() {
     Object.entries(form).forEach(([key, value]) => {
       if (key !== "weightUnit") formData.append(key, key === "weight" ? `${value} ${form.weightUnit}`.trim() : Array.isArray(value) ? savedList(value) : value);
     });
+    formData.append("primaryLanguage", primaryLanguage);
     if (coverImage) formData.append("coverImage", coverImage);
     additionalImages.forEach((file) => {
       if (file) formData.append("additionalImages", file);
     });
 
     try {
+      submittingRef.current = true;
       setSubmitting(true);
-      if (isEditing) await updateProduct(id, formData);
-      else await createProduct(formData);
+      const result = isEditing ? await updateProduct(id, formData) : await createProduct(formData);
+      if (result.translation?.disabled) setTranslationNotice("Auto-translation is not set up");
       navigate("/products");
     } catch (err) {
       setServerError(err?.response?.data?.message || "Failed to save product");
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
 
   return (
     <div className={PAGE}>
-      <button className={BACK_LINK} onClick={() => navigate(-1)} type="button">
+      <button className={BACK_LINK} onClick={() => { if (!dirtyRef.current || window.confirm("Discard unsaved product changes?")) navigate(-1); }} type="button">
         <ArrowLeft size={18} /> {isEditing ? "Edit Product" : "Add Product"}
       </button>
 
@@ -664,6 +691,13 @@ export default function AddProduct() {
               <input className={INPUT} name="subCategory" value={form.subCategory} onChange={handleChange} placeholder="Enter Full Name" />
             </Field>
           </div>
+
+          <Field label="Primary language">
+            <select className={INPUT} value={primaryLanguage} onChange={(event) => changePrimaryLanguage(event.target.value)}>
+              {LANGUAGE_OPTIONS.map((language) => <option key={language.code} value={language.code}>{language.label}</option>)}
+            </select>
+            <span className={HINT}>Used when a customer’s preferred language has no translation.</span>
+          </Field>
 
           <div className={GRID_2}>
             <Field label="Material" required error={errors.material}>
@@ -738,6 +772,14 @@ export default function AddProduct() {
               <input className={INPUT} name="sellingPrice" type="number" min="0.01" step="0.01" value={form.sellingPrice} onChange={handleChange} placeholder="₹ Enter the Price" />
             </Field>
           </div>
+        </section>
+
+        <section className={CARD}>
+          <h3 className={CARD_TITLE}>Translations</h3>
+          <div className="mb-4 flex flex-wrap gap-2" role="tablist" aria-label="Translation language">
+            {LANGUAGE_OPTIONS.map((language) => <button key={language.code} type="button" role="tab" aria-selected={translationLanguage === language.code} onClick={() => setTranslationLanguage(language.code)} className={`rounded-lg px-3 py-2 text-sm font-semibold ${translationLanguage === language.code ? "bg-[#2f7a3c] text-white" : "border border-[#ddd] text-[#444]"}`}>{language.label}{language.code === primaryLanguage ? " (Primary)" : ""} <span className="ml-1 rounded bg-gray-100 px-1 py-0.5 text-[10px] text-gray-700">{language.code === primaryLanguage ? "Primary" : translationMeta[language.code]?.status === "failed" ? "Translation failed" : translationMeta[language.code]?.source === "manual" ? "Edited by you" : translationMeta[language.code]?.source === "auto" ? "Auto-translated" : "Not translated"}</span></button>)}
+          </div>
+          {translationNotice && <p className="mb-3 text-xs text-[#b76b04]">{translationNotice}</p>}{translationLanguage === primaryLanguage ? <p className="text-sm text-[#666]">Edit this primary-language content in Basic Information above.</p> : <><p className="mb-3 text-xs text-[#666]">Translations are generated automatically and shown here for review.</p>{id && <button type="button" onClick={() => { if (window.confirm("Retranslate this language? Existing translated text may be replaced.")) retryProductTranslations(id, true).then(() => getProductById(id)).then(({ translations: rows = [] }) => setTranslationMeta(Object.fromEntries(rows.map((row) => [row.language, row])))).catch((error) => setServerError(error?.response?.data?.message || "Unable to retranslate")); }} className="mb-3 rounded-lg border border-[#4f9d5d] px-3 py-2 text-xs font-semibold text-[#2f7a3c] hover:bg-[#f3faf4]">{translationMeta[translationLanguage]?.status === "failed" ? "Retry" : "Retranslate"}</button>}<TranslationFields value={translationMeta[translationLanguage]} /></>}
         </section>
 
         <section className={CARD}>
@@ -845,4 +887,9 @@ function weightFields(weight = "") {
 
 function ListEditor({ values, onChange, onAdd, onRemove, placeholder, label }) {
   return <div className="flex flex-col gap-2">{values.map((value, index) => <div className="flex gap-2" key={index}><input className={INPUT} value={value} onChange={(event) => onChange(index, event.target.value)} placeholder={`${label} ${index + 1}: ${placeholder}`} aria-label={`${label} ${index + 1}`} /><button type="button" onClick={() => onRemove(index)} disabled={values.length === 1} className="shrink-0 rounded-lg border border-[#ddd] px-3 text-xs font-semibold text-[#666] hover:bg-[#f7f7f7] disabled:cursor-not-allowed disabled:opacity-40">Remove</button></div>)}<button type="button" onClick={onAdd} className="w-fit rounded-lg border border-[#4f9d5d] px-3 py-2 text-xs font-semibold text-[#2f7a3c] hover:bg-[#f3faf4]">+ Add {label}</button></div>;
+}
+
+function TranslationFields({ value }) {
+  const fields = [["productName", "Product Name", 1], ["material", "Material", 1], ["description", "Description", 3], ["benefits", "Benefits", 3], ["highlights", "Highlights (one per line)", 3], ["howToUse", "How To Use (one per line)", 3], ["careInstruction", "Care Instructions (one per line)", 3]];
+  return <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">{fields.map(([name, label]) => <Field key={name} label={label}><p className="min-h-10 whitespace-pre-wrap rounded-lg border border-[#e5e5e5] bg-[#fafafa] p-3 text-sm text-[#444]">{value?.[name] || "—"}</p></Field>)}</div>;
 }

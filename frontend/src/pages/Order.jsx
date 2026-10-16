@@ -112,7 +112,7 @@
 
 
 import { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { IndianRupee, Package, ShoppingBag, Star } from "lucide-react";
 import OrderStatCard from "../components/orders/Orderstatcard";
 import OrdersToolbar from "../components/orders/Orderstoolbar";
@@ -121,7 +121,8 @@ import OrderDetails from "../components/orders/Orderdetails";
 import { getOrders, updateOrderStatus } from "../api/orderapi";
 
 export default function Order() {
-  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const orderId = searchParams.get("orderId");
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("none");
@@ -186,8 +187,6 @@ export default function Order() {
           };
         });
         setOrders(mappedOrders);
-        const selectedOrderId = location.state?.selectedOrderId;
-        if (selectedOrderId) setSelectedOrder(mappedOrders.find((order) => order.rawId === selectedOrderId) ?? null);
       } catch (requestError) {
         if (active) setError(requestError.response?.data?.message || "Unable to load orders.");
       } finally {
@@ -196,7 +195,23 @@ export default function Order() {
     };
     loadOrders();
     return () => { active = false; };
-  }, [location.state]);
+  }, []);
+
+  useEffect(() => {
+    if (!orderId) {
+      setSelectedOrder(null);
+      return;
+    }
+    setSelectedOrder(orders.find((order) => String(order.rawId) === orderId) ?? null);
+  }, [orderId, orders]);
+
+  const closeOrderDetails = () => {
+    setSelectedOrder(null);
+    if (!orderId) return;
+    const nextSearchParams = new URLSearchParams(searchParams);
+    nextSearchParams.delete("orderId");
+    setSearchParams(nextSearchParams, { replace: true });
+  };
 
   const paymentTypeOptions = [
     { value: "none", label: "Default" },
@@ -274,7 +289,7 @@ export default function Order() {
 
       {error && <p className="m-0 rounded-lg bg-[#fef3f2] p-4 text-danger">{error}</p>}
       {isLoading ? <p className="m-0 rounded-lg bg-surface p-4 text-[#4b5563]">Loading orders…</p> : <OrdersTable orders={filteredOrders} query={query} onViewOrder={setSelectedOrder} />}
-      {selectedOrder && <OrderDetails order={selectedOrder} onClose={() => setSelectedOrder(null)} onUpdateStatus={handleUpdateStatus} />}
+      {selectedOrder && <OrderDetails order={selectedOrder} onClose={closeOrderDetails} onUpdateStatus={handleUpdateStatus} />}
     </div>
   );
 }

@@ -8,11 +8,13 @@ const PAN_PATTERN = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 
 const profileFields = "id, status, full_name, business_name, store_name, store_type, store_description, pan_number, gst_number, address_line1, city, state, pin_code, country";
+const profileFieldsWithSubCategory = `${profileFields}, sub_category`;
 
 const toBusiness = (seller) => ({
   businessName: seller.business_name || "",
   storeName: seller.store_name || "",
   storeType: seller.store_type || "",
+  subCategory: seller.sub_category || "",
   storeDescription: seller.store_description || "",
   panNumber: seller.pan_number || "",
   gstNumber: seller.gst_number || "",
@@ -26,17 +28,25 @@ const toBusiness = (seller) => ({
 const normaliseText = (value) => String(value).trim().replace(/\s+/g, " ");
 
 const findSeller = async (sellerId) => {
-  const { data, error } = await supabase
+  const result = await supabase
     .from(table)
-    .select(profileFields)
+    .select(profileFieldsWithSubCategory)
     .eq("id", sellerId)
     .maybeSingle();
+  if (!result.error) return result.data;
+  // Keep existing sellers' profiles readable until migration 014 is deployed.
+  if (result.error.code !== "42703") throw result.error;
+  const { data, error } = await supabase.from(table).select(profileFields).eq("id", sellerId).maybeSingle();
   if (error) throw error;
   return data;
 };
 
 const addTextField = (body, field, column, min, max, errors, payload, { allowEmpty = false } = {}) => {
   if (!Object.hasOwn(body, field)) return;
+  if (allowEmpty && body[field] === null) {
+    payload[column] = null;
+    return;
+  }
   if (typeof body[field] !== "string") {
     errors[field] = "Enter a text value.";
     return;
@@ -116,6 +126,7 @@ export const updateBusiness = async (req, res) => {
     addTextField(body, "businessName", "business_name", 2, 150, errors, payload);
     addTextField(body, "storeName", "store_name", 2, 100, errors, payload);
     addTextField(body, "storeType", "store_type", 2, 100, errors, payload, { allowEmpty: true });
+    addTextField(body, "subCategory", "sub_category", 2, 100, errors, payload, { allowEmpty: true });
     addTextField(body, "storeDescription", "store_description", 0, 1000, errors, payload, { allowEmpty: true });
     addTextField(body, "address1", "address_line1", 2, 300, errors, payload);
     addTextField(body, "city", "city", 2, 100, errors, payload);
@@ -131,7 +142,7 @@ export const updateBusiness = async (req, res) => {
       .from(table)
       .update(payload)
       .eq("id", seller.id)
-      .select(profileFields)
+      .select(profileFieldsWithSubCategory)
       .single();
     if (error) throw error;
 

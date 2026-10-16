@@ -2,8 +2,14 @@ import { supabase } from "../config/supabase.js";
 import { removeProductImages, storagePathFromUrl, uploadProductImages } from "../services/productImageStorage.js";
 import * as XLSX from "xlsx";
 import ExcelJS from "exceljs";
+import { automaticTranslationAvailable, translateTexts } from "../services/translationService.js";
 const table = "seller_products";
 const categoriesTable = "categories";
+const translationsTable = "product_translations";
+const LANGUAGES = new Set(["en", "ta", "hi"]);
+const TRANSLATION_COLUMNS = ["product_name", "material", "description", "benefits", "highlights", "how_to_use", "care_instruction"];
+const TRANSLATION_LIMITS = { productName: 200, material: 200, description: 5000, benefits: 5000, highlights: 5000, howToUse: 5000, careInstruction: 5000 };
+const TRANSLATION_FIELD_MAP = { productName: "product_name", material: "material", description: "description", benefits: "benefits", highlights: "highlights", howToUse: "how_to_use", careInstruction: "care_instruction" };
 
 const nullableText = (value) => (value?.trim?.() ? value.trim() : null);
 const nullableNumber = (value) => (value === "" || value === undefined ? null : Number(value));
@@ -46,7 +52,17 @@ const getCurrentCategories = async () => {
   if (error) throw error;
   return [...new Set(data.map(({ name }) => name?.trim()).filter(Boolean))];
 };
-const toApiProduct = (product) => ({
+const hasText = (value) => typeof value === "string" ? value.trim().length > 0 : value !== null && value !== undefined;
+const languageFrom = (value) => LANGUAGES.has(value) ? value : "en";
+const translationPayload = (body = {}, source = "manual", status = "ok") => ({ product_name: nullableText(body.productName), material: nullableText(body.material), description: nullableText(body.description), benefits: nullableText(body.benefits), highlights: nullableText(body.highlights), how_to_use: nullableText(body.howToUse), care_instruction: nullableText(body.careInstruction), source, status });
+const translationForApi = (row) => row && ({ language: row.language, productName: row.product_name, material: row.material, description: row.description, benefits: row.benefits, highlights: row.highlights, howToUse: row.how_to_use, careInstruction: row.care_instruction, source: row.source, status: row.status || "ok" });
+const applyTranslation = (product, translation) => {
+  if (!translation) return product;
+  const next = { ...product };
+  TRANSLATION_COLUMNS.forEach((column) => { if (hasText(translation[column])) next[column] = translation[column]; });
+  return next;
+};
+const toApiProduct = (product, { availableLanguages = [], requestedLanguage = null } = {}) => ({
   _id: product.id,
   id: product.id,
   sellerId: product.seller_id,
@@ -68,6 +84,88 @@ const toApiProduct = (product) => ({
   usage: { howToUse: product.how_to_use, careInstruction: product.care_instruction },
   createdAt: product.created_at,
   updatedAt: product.updated_at,
+  primaryLanguage: languageFrom(product.primary_language),
+  availableLanguages: [...new Set([languageFrom(product.primary_language), ...availableLanguages])],
+  language: requestedLanguage || languageFrom(product.primary_language),
+});
+const parseTranslations = (raw) => {
+  if (!raw) return {};
+  try { const parsed = typeof raw === "string" ? JSON.parse(raw) : raw; return parsed && typeof parsed === "object" ? parsed : {}; }
+  catch { const error = new Error("translations must be valid JSON"); error.status = 400; throw error; }
+};
+const validateTranslation = (content = {}) => {
+  for (const [field, limit] of Object.entries(TRANSLATION_LIMITS)) {
+    if (typeof content[field] === "string" && content[field].length > limit) {
+      const error = new Error(`${field} must be ${limit} characters or fewer`);
+      error.status = 400;
+      throw error;
+    }
+  }
+};
+const upsertTranslations = async (productId, rawTranslations) => {
+  const translations = parseTranslations(rawTranslations);
+  for (const [language, content] of Object.entries(translations)) {
+    if (!LANGUAGES.has(language) || !content || typeof content !== "object") continue;
+    validateTranslation(content);
+    const payload = translationPayload(content);
+    const populated = Object.entries(payload).some(([key, value]) => key !== "source" && hasText(value));
+    const query = supabase.from(translationsTable);
+    const { error } = populated
+      ? await query.upsert({ product_id: productId, language, ...payload }, { onConflict: "product_id,language" })
+      : await query.delete().eq("product_id", productId).eq("language", language);
+    if (error) throw error;
+  }
+};
+const readTranslations = async (productId) => {
+  const { data, error } = await supabase.from(translationsTable).select("*").eq("product_id", productId);
+  if (error) throw error;
+  return data ?? [];
+};
+const listValues = (value) => { try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : null; } catch { return null; } };
+const productTranslationContent = (product, columns = TRANSLATION_COLUMNS) => Object.fromEntries(Object.entries(TRANSLATION_FIELD_MAP).filter(([, column]) => columns.includes(column)).map(([field, column]) => [field, product[column] ?? ""]));
+const autoTranslateProduct = async (product, { columns = TRANSLATION_COLUMNS, force = false } = {}) => {
+  if (!automaticTranslationAvailable()) return { disabled: true, warnings: ["Automatic translation is not set up"] };
+  const sourceLanguage = languageFrom(product.primary_language); const existing = await readTranslations(product.id); const warnings = [];
+  for (const targetLanguage of [...LANGUAGES].filter((language) => language !== sourceLanguage)) {
+    const current = existing.find((translation) => translation.language === targetLanguage);
+    if (current?.source === "manual" && !force) continue;
+    const content = productTranslationContent(product, columns); const texts = []; const slots = [];
+    Object.entries(content).forEach(([field, value]) => { const list = listValues(value); if (list) list.forEach((item, index) => { if (hasText(item)) { slots.push([field, index, list]); texts.push(item); } }); else if (hasText(value)) { slots.push([field, null, null]); texts.push(value); } });
+    if (!texts.length) continue;
+    try {
+      const results = await translateTexts({ texts, sourceLang: sourceLanguage, targetLang: targetLanguage }); const translated = {};
+      slots.forEach(([field, index, list], resultIndex) => { if (index === null) translated[field] = results[resultIndex]; else { const next = translated[field] ? JSON.parse(translated[field]) : [...list]; next[index] = results[resultIndex]; translated[field] = JSON.stringify(next); } });
+      const payload = translationPayload(translated, "auto", "ok");
+      const { error } = await supabase.from(translationsTable).upsert({ product_id: product.id, language: targetLanguage, ...payload }, { onConflict: "product_id,language" }); if (error) throw error;
+    } catch (error) { warnings.push(`${targetLanguage}: ${error.code || "translation failed"}`); await supabase.from(translationsTable).upsert({ product_id: product.id, language: targetLanguage, source: current?.source || "auto", status: "failed" }, { onConflict: "product_id,language" }); }
+  }
+  return { disabled: false, warnings };
+};
+const applyListFilters = (query, queryParams) => {
+  let filtered = query;
+  if (queryParams.search) { const value = queryParams.search.replace(/[%_,()]/g, ""); filtered = filtered.or(`product_name.ilike.%${value}%,product_id.ilike.%${value}%,sku.ilike.%${value}%`); }
+  if (queryParams.category) filtered = filtered.eq("category", queryParams.category);
+  if (["active", "inactive"].includes(queryParams.isActive)) filtered = filtered.eq("is_active", queryParams.isActive === "active");
+  if (queryParams.stockStatus) filtered = filtered.eq("stock_status", queryParams.stockStatus);
+  return filtered;
+};
+const restoreTranslations = async (productId, rows) => {
+  const { error: deleteError } = await supabase.from(translationsTable).delete().eq("product_id", productId);
+  if (deleteError) throw deleteError;
+  if (!rows.length) return;
+  const payload = rows.map(({ id, created_at, updated_at, ...row }) => ({ ...row, product_id: productId }));
+  const { error } = await supabase.from(translationsTable).insert(payload);
+  if (error) throw error;
+};
+const publicProduct = (product) => ({
+  id: product.id, productId: product.product_id, productName: product.product_name,
+  category: product.category, subCategory: product.sub_category, material: product.material,
+  weight: product.weight, description: product.description, benefits: product.benefits,
+  highlights: product.highlights, dimensions: { length: product.length, width: product.width, height: product.height },
+  pricing: { mrp: product.mrp, discountPrice: product.discount_price, sellingPrice: product.selling_price },
+  images: { cover: product.cover_image, additional: product.additional_images ?? [] },
+  usage: { howToUse: product.how_to_use, careInstruction: product.care_instruction },
+  primaryLanguage: languageFrom(product.primary_language),
 });
 const sheetRowToBody = (row) => ({
   productName: row.product_name?.toString().trim(),
@@ -155,7 +253,7 @@ export const createProduct = async (req, res, next) => {
     // Retry if another request claimed the same next sequence between lookup and insert.
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const sku = await nextSkuFor(req.body.productName);
-      const payload = { ...productPayload({ ...req.body, sku }, {}, images), product_id: id, seller_id: req.seller.id };
+      const payload = { ...productPayload({ ...req.body, sku }, {}, images), product_id: id, seller_id: req.seller.id, primary_language: languageFrom(req.body.primaryLanguage) };
       ({ data, error } = await supabase.from(table).insert(payload).select().single());
       if (!error || !(error.code === "23505" && /sku/i.test(error.message ?? ""))) break;
     }
@@ -163,7 +261,8 @@ export const createProduct = async (req, res, next) => {
       await removeProductImages(images.paths);
       throw error;
     }
-    return res.status(201).json({ success: true, data: toApiProduct(data) });
+    const translationResult = await autoTranslateProduct(data);
+    return res.status(201).json({ success: true, data: toApiProduct(data), translation: translationResult });
   } catch (error) {
     // A concurrent offer assignment can pass the pre-check just before deletion.
     // Keep the database RESTRICT constraint as the final safety net and preserve
@@ -179,19 +278,12 @@ export const getProducts = async (req, res, next) => {
   try {
     const page = Math.max(Number(req.query.page) || 1, 1);
     const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 100);
-    let query = supabase.from(table).select("*", { count: "exact" }).eq("seller_id", req.seller.id).order("created_at", { ascending: false });
-    if (req.query.search) {
-      const value = req.query.search.replace(/[%_,()]/g, "");
-      query = query.or(`product_name.ilike.%${value}%,product_id.ilike.%${value}%,sku.ilike.%${value}%`);
-    }
-    if (req.query.category) query = query.eq("category", req.query.category);
-    if (["active", "inactive"].includes(req.query.isActive)) {
-      query = query.eq("is_active", req.query.isActive === "active");
-    }
-    if (req.query.stockStatus) query = query.eq("stock_status", req.query.stockStatus);
-    const { data, count, error } = await query.range((page - 1) * limit, page * limit - 1);
-    if (error) throw error;
-    return res.json({ success: true, data: data.map(toApiProduct), pagination: { total: count ?? 0, page, pages: Math.ceil((count ?? 0) / limit) } });
+    const query = applyListFilters(supabase.from(table).select("*", { count: "exact" }).eq("seller_id", req.seller.id).order("created_at", { ascending: false }), req.query);
+    const result = await query.range((page - 1) * limit, page * limit - 1);
+    if (result.error) throw result.error;
+    const data = result.data ?? [];
+    const count = result.count ?? data.length;
+    return res.json({ success: true, data: data.map((product) => toApiProduct(product)), pagination: { total: count, page, pages: Math.ceil(count / limit) } });
   } catch (error) { return next(error); }
 };
 
@@ -220,7 +312,80 @@ export const getProductById = async (req, res, next) => {
     const { data, error } = await supabase.from(table).select("*").eq("id", req.params.id).eq("seller_id", req.seller.id).maybeSingle();
     if (error) throw error;
     if (!data) return res.status(404).json({ success: false, message: "Product not found" });
-    return res.json({ success: true, data: toApiProduct(data) });
+    const translations = await readTranslations(data.id);
+    const requestedLanguage = LANGUAGES.has(req.query.lang) ? req.query.lang : languageFrom(data.primary_language);
+    const selected = translations.find((translation) => translation.language === requestedLanguage);
+    return res.json({ success: true, data: toApiProduct(applyTranslation(data, selected), { availableLanguages: translations.map(({ language }) => language), requestedLanguage }), translations: translations.map(translationForApi) });
+  } catch (error) { return next(error); }
+};
+
+// Storefronts may use this read-only endpoint. It exposes only active products
+// and never accepts or returns a seller identity as an authorization input.
+export const getPublicProductById = async (req, res, next) => {
+  try {
+    const { data, error } = await supabase.from(table).select("*").eq("id", req.params.id).eq("is_active", true).maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ success: false, message: "Product not found" });
+    const translations = await readTranslations(data.id);
+    const requestedLanguage = LANGUAGES.has(req.query.lang) ? req.query.lang : languageFrom(data.primary_language);
+    const selected = translations.find((translation) => translation.language === requestedLanguage);
+    const product = publicProduct(applyTranslation(data, selected));
+    product.availableLanguages = [...new Set([languageFrom(data.primary_language), ...translations.map(({ language }) => language)])];
+    product.language = requestedLanguage;
+    return res.json({ success: true, data: product });
+  } catch (error) { return next(error); }
+};
+
+export const getProductTranslations = async (req, res, next) => {
+  try {
+    const { data: product, error } = await supabase.from(table).select("id, primary_language").eq("id", req.params.id).eq("seller_id", req.seller.id).maybeSingle();
+    if (error) throw error;
+    if (!product) return res.status(404).json({ success: false, message: "Product not found" });
+    const translations = await readTranslations(product.id);
+    return res.json({ success: true, data: { primaryLanguage: languageFrom(product.primary_language), translations: translations.map(translationForApi) } });
+  } catch (error) { return next(error); }
+};
+
+export const saveProductTranslation = async (req, res, next) => {
+  try {
+    const language = req.params.language;
+    if (!LANGUAGES.has(language)) return res.status(400).json({ success: false, message: "Unsupported language" });
+    const { data: product, error } = await supabase.from(table).select("id, primary_language").eq("id", req.params.id).eq("seller_id", req.seller.id).maybeSingle();
+    if (error) throw error;
+    if (!product) return res.status(404).json({ success: false, message: "Product not found" });
+    if (language === languageFrom(product.primary_language)) return res.status(400).json({ success: false, message: "Edit the primary-language product fields directly" });
+    await upsertTranslations(product.id, { [language]: req.body });
+    const translations = await readTranslations(product.id);
+    return res.json({ success: true, data: translations.map(translationForApi) });
+  } catch (error) { return next(error); }
+};
+
+export const retryProductTranslations = async (req, res, next) => {
+  try {
+    const { data: product, error } = await supabase.from(table).select("*").eq("id", req.params.id).eq("seller_id", req.seller.id).maybeSingle();
+    if (error) throw error;
+    if (!product) return res.status(404).json({ success: false, message: "Product not found" });
+    const characterCount = TRANSLATION_COLUMNS.reduce((total, column) => total + String(product[column] ?? "").length, 0);
+    if (characterCount > 25_000) return res.status(400).json({ success: false, message: "Product text exceeds the 25,000 character translation limit." });
+    const result = await autoTranslateProduct(product, { force: req.query.force === "true" });
+    return res.json({ success: true, data: result });
+  } catch (error) { return next(error); }
+};
+
+export const translateMissingProducts = async (req, res, next) => {
+  try {
+    const { data: products, error } = await supabase.from(table).select("*").eq("seller_id", req.seller.id).order("created_at", { ascending: false }).limit(50);
+    if (error) throw error;
+    let translated = 0; let skipped = 0; let failed = 0;
+    for (const product of products) {
+      const rows = await readTranslations(product.id);
+      const missing = [...LANGUAGES].some((language) => language !== languageFrom(product.primary_language) && !rows.some((row) => row.language === language));
+      if (!missing) { skipped += 1; continue; }
+      const result = await autoTranslateProduct(product);
+      if (result.disabled || result.warnings.length) failed += 1; else translated += 1;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    return res.json({ success: true, data: { translated, skipped, failed } });
   } catch (error) { return next(error); }
 };
 
@@ -229,9 +394,22 @@ export const updateProduct = async (req, res, next) => {
     const { data: existing, error: fetchError } = await supabase.from(table).select("*").eq("id", req.params.id).eq("seller_id", req.seller.id).maybeSingle();
     if (fetchError) throw fetchError;
     if (!existing) return res.status(404).json({ success: false, message: "Product not found" });
+    const translationSnapshot = await readTranslations(existing.id);
     const images = await uploadProductImages(req.files, existing.product_id);
-    const { data, error } = await supabase.from(table).update(productPayload(req.body, existing, images)).eq("id", req.params.id).select().single();
+    const primaryLanguage = languageFrom(req.body.primaryLanguage || existing.primary_language);
+    // Preserve the old primary copy before assigning a new primary language.
+    // The form submits the edited text as the new primary-language content.
+    if (primaryLanguage !== languageFrom(existing.primary_language)) {
+      await upsertTranslations(existing.id, { [languageFrom(existing.primary_language)]: {
+        productName: existing.product_name, material: existing.material, description: existing.description,
+        benefits: existing.benefits, highlights: existing.highlights, howToUse: existing.how_to_use,
+        careInstruction: existing.care_instruction,
+      } });
+    }
+    const changedPayload = { ...productPayload(req.body, existing, images), primary_language: primaryLanguage };
+    const { data, error } = await supabase.from(table).update(changedPayload).eq("id", req.params.id).eq("seller_id", req.seller.id).select().single();
     if (error) {
+      await restoreTranslations(existing.id, translationSnapshot);
       await removeProductImages(images.paths);
       throw error;
     }
@@ -240,7 +418,9 @@ export const updateProduct = async (req, res, next) => {
       ...(images.additional?.length ? existing.additional_images ?? [] : []),
     ];
     await removeProductImages(replacedUrls.map(storagePathFromUrl).filter(Boolean));
-    return res.json({ success: true, data: toApiProduct(data) });
+    const changedColumns = TRANSLATION_COLUMNS.filter((column) => data[column] !== existing[column]);
+    const translationResult = changedColumns.length ? await autoTranslateProduct(data, { columns: changedColumns, force: req.body.forceRetranslate === "true" }) : { disabled: !automaticTranslationAvailable(), warnings: [] };
+    return res.json({ success: true, data: toApiProduct(data), translation: translationResult });
   } catch (error) { return next(error); }
 };
 export const updateProductStatus = async (req, res, next) => {

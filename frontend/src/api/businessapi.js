@@ -9,6 +9,7 @@ export async function saveBusiness(values) {
   const payload = {
     storeName: values.storeName,
     storeType: values.storeType,
+    subCategory: values.subCategory || null,
     storeDescription: values.storeDescription,
     address1: values.address1,
     city: values.city,

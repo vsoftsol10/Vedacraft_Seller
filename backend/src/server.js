@@ -15,9 +15,14 @@ import insightsRoutes from "./routes/InsightsRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import documentRoutes from "./routes/documentRoutes.js";
+import { warnIfTranslationDisabled } from "./services/translationService.js";
 
 const app = express();
-const allowedOrigins = (process.env.CLIENT_ORIGIN || process.env.CLIENT_URL || "http://localhost:5173").split(",");
+warnIfTranslationDisabled();
+const allowedOrigins = (process.env.CLIENT_ORIGIN || process.env.CLIENT_URL || "http://localhost:5173")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());

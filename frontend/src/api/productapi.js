@@ -2,11 +2,30 @@ import axios from "axios";
 import { cachedRequest, invalidateCachedRequests } from "./requestCache";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+export const SELLER_SESSION_KEY = "vedacraftsSeller";
 
 const api = axios.create({ baseURL: API_BASE_URL });
 
+export const getSellerSession = () => {
+  const savedSession = sessionStorage.getItem(SELLER_SESSION_KEY);
+  if (!savedSession) return null;
+
+  try {
+    const session = JSON.parse(savedSession);
+    if (!session?.token) throw new Error("Missing seller session token");
+    return session;
+  } catch {
+    clearSellerSession();
+    return null;
+  }
+};
+
+export const saveSellerSession = (session) => {
+  sessionStorage.setItem(SELLER_SESSION_KEY, JSON.stringify(session));
+};
+
 export const clearSellerSession = () => {
-  sessionStorage.removeItem("vedacraftsSeller");
+  sessionStorage.removeItem(SELLER_SESSION_KEY);
   sessionStorage.removeItem("vedacraftsSellerSettings");
   invalidateCachedRequests();
 };
@@ -14,8 +33,7 @@ export const clearSellerSession = () => {
 api.interceptors.request.use((config) => {
   let token = null;
   try {
-    const savedSession = sessionStorage.getItem("vedacraftsSeller");
-    token = savedSession ? JSON.parse(savedSession).token : null;
+    token = getSellerSession()?.token || null;
   } catch {
     clearSellerSession();
   }
@@ -53,8 +71,13 @@ export const getProductCategories = () =>
 export const getNextProductSku = (productName) =>
   api.get("/products/next-sku", { params: { productName } }).then((res) => res.data);
 
-export const getProductById = (id) =>
-  cachedRequest(`products:item:${id}`, () => api.get(`/products/${id}`).then((res) => res.data), 20_000);
+export const getProductById = (id, lang) =>
+  cachedRequest(`products:item:${id}:${lang || "default"}`, () => api.get(`/products/${id}`, { params: lang ? { lang } : undefined }).then((res) => res.data), 20_000);
+
+export const getProductTranslations = (id) => api.get(`/products/${id}/translations`).then((res) => res.data);
+export const saveProductTranslation = (id, language, content) => api.put(`/products/${id}/translations/${language}`, content).then((res) => { invalidateCachedRequests("products:"); return res.data; });
+export const retryProductTranslations = (id, force = false) => api.post(`/products/${id}/translations/retry?force=${force}`).then((res) => { invalidateCachedRequests("products:"); return res.data; });
+export const translateMissingProducts = () => api.post("/products/translations/translate-missing").then((res) => { invalidateCachedRequests("products:"); return res.data; });
 
 export const createProduct = (formData) =>
   api
@@ -86,6 +109,12 @@ export const uploadSellerDocument = (documentType, file) => {
   formData.append("documentType", documentType);
   formData.append("document", file);
   return api.post("/documents", formData, { headers: { "Content-Type": "multipart/form-data" } }).then((res) => res.data);
+};
+
+export const replaceSellerDocument = (id, file) => {
+  const formData = new FormData();
+  formData.append("document", file);
+  return api.put(`/documents/${id}`, formData, { headers: { "Content-Type": "multipart/form-data" } }).then((res) => res.data);
 };
 
 

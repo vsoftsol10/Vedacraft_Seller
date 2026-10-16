@@ -463,10 +463,10 @@ const FILE_INPUT = "w-full rounded-lg border border-[#e5e5e5] p-2.5 text-[13px] 
 const PRIMARY_BTN =
   "flex w-full sm:w-auto cursor-pointer items-center justify-center gap-1.5 rounded-lg border-0 bg-[#f2a93b] px-5 py-2.5 font-semibold text-white hover:bg-[#e2992b] disabled:opacity-50";
 const GHOST_LINK_BTN = "text-[13px] text-[#777] underline";
-const TABLE_CARD = "rounded-xl border border-[#eee] bg-white overflow-x-auto";
-const TABLE = "w-full min-w-[560px] border-collapse text-[14px]";
-const TH = "border-b border-[#eee] px-3 py-3 text-left text-[13px] text-[#555]";
-const TD = "border-b border-[#f5f5f5] px-3 py-3";
+const TABLE_CARD = "vc-table-wrapper";
+const TABLE = "vc-table min-w-[560px] text-left";
+const TH = "text-left";
+const TD = "";
 
 export default function BulkUploadProducts({ onClose }) {
   const [step, setStep] = useState("upload"); // "upload" | "preview" | "done"

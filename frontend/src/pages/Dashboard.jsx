@@ -41,8 +41,8 @@ export default function Dashboard() {
       <h2 className="mb-5 text-2xl font-bold text-gray-900">Dashboard</h2>
       {error && <p className="mb-5 rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</p>}
       <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <StatCard icon={IndianRupee} label="Total Revenue" value={stats ? money(stats.totalRevenue) : "—"} change={stats?.revenueChange} iconBg="bg-emerald-50" iconColor="text-emerald-600" />
-        <StatCard icon={ShoppingBag} label="Total Orders" value={stats?.totalOrders ?? "—"} change={stats?.ordersChange} iconBg="bg-amber-50" iconColor="text-amber-600" />
+        <StatCard icon={IndianRupee} label="Total Revenue" value={stats ? money(stats.totalRevenue) : "—"} iconBg="bg-emerald-50" iconColor="text-emerald-600" />
+        <StatCard icon={ShoppingBag} label="Total Orders" value={stats?.totalOrders ?? "—"} iconBg="bg-amber-50" iconColor="text-amber-600" />
         <StatCard icon={Package} label="Total Products" value={stats?.totalProducts ?? "—"} iconBg="bg-emerald-50" iconColor="text-emerald-600" />
         <StatCard icon={Star} label="Store Rating" value={stats?.storeRating ?? "—"} iconBg="bg-amber-50" iconColor="text-amber-500" />
       </div>

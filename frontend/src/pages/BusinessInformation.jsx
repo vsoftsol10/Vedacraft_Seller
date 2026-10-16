@@ -1,42 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Upload } from "lucide-react";
 import { fetchBusiness, parseBusinessApiError, saveBusiness } from "../api/businessapi";
+import { BUSINESS_CATEGORIES, categoryValue } from "../constants/businessCategories";
+import EditActions from "../components/settings/EditActions";
+import ReadOnlyField from "../components/settings/ReadOnlyField";
 
-const EMPTY = {
-  businessName: "",
-  storeName: "",
-  storeType: "",
-  subCategory: "",
-  gstNumber: "",
-  panNumber: "",
-  businessType: "Individual",
-  storeDescription: "",
-  city: "",
-  state: "",
-  pinCode: "",
-  country: "India",
-  address1: "",
-};
-
-const BUSINESS_TYPES = ["Individual", "Registered Business"];
-const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
-const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg"];
-const SAVED_FIELDS = ["businessName", "storeName", "storeType", "storeDescription", "gstNumber", "panNumber", "address1", "city", "state", "pinCode", "country"];
-
-const inputBase =
-  "rounded-md border bg-white px-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-amber-400 focus:outline-none focus:ring-4 focus:ring-amber-400/25 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500";
-
+const EMPTY = { businessName: "", storeName: "", storeType: "", subCategory: "", gstNumber: "", panNumber: "", businessType: "Individual", storeDescription: "", city: "", state: "", pinCode: "", country: "India", address1: "" };
+const SAVED_FIELDS = ["businessName", "storeName", "storeType", "subCategory", "storeDescription", "gstNumber", "panNumber", "address1", "city", "state", "pinCode", "country"];
+const inputBase = "h-12 rounded-md border border-gray-300 bg-white px-2.5 text-sm text-gray-900 outline-none focus:border-[#2b7a1d] focus:ring-4 focus:ring-[#e4f4e2]";
 const clean = (value) => String(value ?? "").trim().replace(/\s+/g, " ");
-
+const toFormValues = (data) => ({ ...EMPTY, businessName: data?.businessName ?? "", storeName: data?.storeName ?? "", storeType: categoryValue(data?.storeType), subCategory: data?.subCategory ?? "", storeDescription: data?.storeDescription ?? "", panNumber: data?.panNumber ?? "", gstNumber: data?.gstNumber ?? "", address1: data?.address1 ?? "", city: data?.city ?? "", state: data?.state ?? "", pinCode: data?.pinCode ?? "", country: data?.country ?? "India" });
 function validate(values) {
   const errors = {};
-  const storeName = clean(values.storeName);
-  const storeType = clean(values.storeType);
-  const businessName = clean(values.businessName);
-
-  if (businessName && (businessName.length < 2 || businessName.length > 150)) errors.businessName = "Business name must be 2-150 characters.";
-  if (storeName && (storeName.length < 2 || storeName.length > 100)) errors.storeName = "Store name must be 2-100 characters.";
-  if (storeType && (storeType.length < 2 || storeType.length > 100)) errors.storeType = "Business category must be 2-100 characters when provided.";
+  if (clean(values.businessName) && (clean(values.businessName).length < 2 || clean(values.businessName).length > 150)) errors.businessName = "Business name must be 2-150 characters.";
+  if (clean(values.storeName) && (clean(values.storeName).length < 2 || clean(values.storeName).length > 100)) errors.storeName = "Store name must be 2-100 characters.";
+  if (!clean(values.storeType)) errors.storeType = "Select a business category.";
+  if (clean(values.subCategory) && (clean(values.subCategory).length < 2 || clean(values.subCategory).length > 100)) errors.subCategory = "Sub category must be 2-100 characters when provided.";
   if (String(values.storeDescription ?? "").length > 1000) errors.storeDescription = "Description can be up to 1000 characters.";
   if (clean(values.address1).length < 2 || clean(values.address1).length > 300) errors.address1 = "Address must be 2-300 characters.";
   if (clean(values.city).length < 2 || clean(values.city).length > 100) errors.city = "City must be 2-100 characters.";
@@ -46,281 +24,22 @@ function validate(values) {
   return errors;
 }
 
-const toFormValues = (data) => ({
-  ...EMPTY,
-  businessName: data?.businessName ?? "",
-  storeName: data?.storeName ?? "",
-  storeType: data?.storeType ?? "",
-  storeDescription: data?.storeDescription ?? "",
-  panNumber: data?.panNumber ?? "",
-  gstNumber: data?.gstNumber ?? "",
-  address1: data?.address1 ?? "",
-  city: data?.city ?? "",
-  state: data?.state ?? "",
-  pinCode: data?.pinCode ?? "",
-  country: data?.country ?? "India",
-});
-
 export default function BusinessInformation() {
-  const [saved, setSaved] = useState(EMPTY);
-  const [values, setValues] = useState(EMPTY);
-  const [errors, setErrors] = useState({});
-  const [coverPreview, setCoverPreview] = useState(null);
-  const [coverError, setCoverError] = useState("");
-  const [touched, setTouched] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [loadFailed, setLoadFailed] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [banner, setBanner] = useState(null);
-  const fileInputRef = useRef(null);
-
-  const applyBusiness = useCallback((data) => {
-    const next = toFormValues(data);
-    setSaved(next);
-    setValues(next);
-    setErrors({});
-    setTouched({});
-    setLoadFailed(false);
-  }, []);
-
-  const loadBusiness = useCallback(async () => {
-    setLoading(true);
-    setLoadFailed(false);
-    setBanner(null);
-    try {
-      applyBusiness(await fetchBusiness());
-    } catch (err) {
-      setLoadFailed(true);
-      setBanner({ type: "error", text: parseBusinessApiError(err).message });
-    } finally {
-      setLoading(false);
-    }
-  }, [applyBusiness]);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const data = await fetchBusiness();
-        if (!cancelled) applyBusiness(data);
-      } catch (err) {
-        if (!cancelled) {
-          setLoadFailed(true);
-          setBanner({ type: "error", text: parseBusinessApiError(err).message });
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [applyBusiness]);
-
+  const [saved, setSaved] = useState(EMPTY); const [values, setValues] = useState(EMPTY); const [errors, setErrors] = useState({}); const [loading, setLoading] = useState(true); const [loadFailed, setLoadFailed] = useState(false); const [editing, setEditing] = useState(false); const [saving, setSaving] = useState(false); const [banner, setBanner] = useState(null);
+  const editButtonRef = useRef(null); const firstInputRef = useRef(null);
+  const apply = useCallback((data) => { const next = toFormValues(data); setSaved(next); setValues(next); setErrors({}); setLoadFailed(false); }, []);
+  const load = useCallback(async () => { setLoading(true); setLoadFailed(false); try { apply(await fetchBusiness()); } catch (error) { setLoadFailed(true); setBanner({ type: "error", text: parseBusinessApiError(error).message }); } finally { setLoading(false); } }, [apply]);
+  useEffect(() => { load(); }, [load]);
   const dirty = SAVED_FIELDS.some((field) => values[field] !== saved[field]);
-
-  const handleChange = (event) => {
-    const { name, value } = event.target;
-    setValues((prev) => ({ ...prev, [name]: value }));
-    setErrors((prev) => (prev[name] ? { ...prev, [name]: undefined } : prev));
-    setBanner(null);
-    if (touched[name]) setErrors((prev) => ({ ...prev, [name]: validate({ ...values, [name]: value })[name] }));
-  };
-
-  const handleBlur = (event) => {
-    const { name } = event.target;
-    setTouched((prev) => ({ ...prev, [name]: true }));
-    setErrors((prev) => ({ ...prev, [name]: validate(values)[name] }));
-  };
-
-  const handlePickImage = (event) => {
-    const picked = event.target.files?.[0];
-    event.target.value = "";
-    if (!picked) return;
-    if (!ALLOWED_IMAGE_TYPES.includes(picked.type)) return setCoverError("Only PNG or JPG images are allowed.");
-    if (picked.size > MAX_IMAGE_BYTES) return setCoverError("Image must be 2 MB or smaller.");
-    setCoverError("");
-    const reader = new FileReader();
-    reader.onload = () => setCoverPreview(reader.result);
-    reader.readAsDataURL(picked);
-  };
-
-  const handleCancel = () => {
-    setValues(saved);
-    setErrors({});
-    setTouched({});
-    setCoverPreview(null);
-    setCoverError("");
-    setBanner(null);
-  };
-
-  const handleSave = async () => {
-    if (saving || !dirty) return;
-    const found = validate(values);
-    setErrors(found);
-    if (Object.keys(found).length) {
-      setTouched({ businessName: true, storeName: true, storeType: true, storeDescription: true, address1: true, city: true, state: true, pinCode: true, country: true });
-      return;
-    }
-
-    setSaving(true);
-    setBanner(null);
-    try {
-      const data = await saveBusiness(values);
-      applyBusiness(data);
-      setBanner({ type: "success", text: "Business information saved." });
-    } catch (err) {
-      const { message, fieldErrors } = parseBusinessApiError(err);
-      setErrors((prev) => ({ ...prev, ...fieldErrors }));
-      setBanner({ type: "error", text: message });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const renderField = ({ label, name, required, optional, disabled, hint, placeholder, as = "input", rows = 4, maxLength }) => {
-    const Control = as;
-    const error = errors[name];
-    const sizeClass = as === "textarea" ? "min-h-20 resize-y py-2" : "h-12";
-    return (
-      <div className="flex flex-col gap-1.5" key={name}>
-        <label htmlFor={name} className="text-sm text-gray-900">
-          {label}
-          {required && <span className="text-red-600"> *</span>}
-          {optional && <span className="text-gray-700"> (optional)</span>}
-        </label>
-        <Control
-          id={name}
-          name={name}
-          value={values[name]}
-          onChange={handleChange}
-          onBlur={handleBlur}
-          disabled={disabled}
-          placeholder={placeholder}
-          maxLength={maxLength}
-          rows={as === "textarea" ? rows : undefined}
-          type={as === "input" ? "text" : undefined}
-          aria-invalid={Boolean(error)}
-          className={`${inputBase} ${sizeClass} ${error ? "border-red-600" : "border-gray-300"}`}
-        />
-        {hint && !error && <p className="m-0 text-xs text-gray-500">{hint}</p>}
-        {error && <p className="m-0 text-xs text-red-600">{error}</p>}
-      </div>
-    );
-  };
-
-  if (loading) {
-    return <div className="flex max-w-[1100px] flex-col gap-5 pb-8 pt-2"><header><h1 className="m-0 text-[26px] font-bold text-gray-900 sm:text-[32px]">Business Information</h1><p className="mb-0 mt-1.5 text-[15px] text-gray-800">Manage your personal and store profile information.</p></header><p className="m-0 text-sm text-gray-500">Loading business information…</p></div>;
-  }
-
-  if (loadFailed) {
-    return <div className="flex max-w-[1100px] flex-col gap-5 pb-8 pt-2"><header><h1 className="m-0 text-[26px] font-bold text-gray-900 sm:text-[32px]">Business Information</h1><p className="mb-0 mt-1.5 text-[15px] text-gray-800">Manage your personal and store profile information.</p></header><p className="m-0 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{banner?.text || "Unable to load business information."}</p><button type="button" onClick={loadBusiness} className="w-fit rounded border border-gray-900 bg-white px-4 py-2 text-sm font-semibold text-gray-900">Retry</button></div>;
-  }
-
-  return (
-    <div className="flex max-w-[1100px] flex-col gap-4 pb-8 pt-1">
-      <header>
-        <h1 className="m-0 text-[26px] font-bold text-gray-900 sm:text-[32px]">Business Information</h1>
-        <p className="mb-0 mt-1 text-sm text-gray-800">Manage your personal and store profile information.</p>
-      </header>
-
-      <section className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-3">
-        <h2 className="m-0 text-sm font-bold text-gray-900">Store Details</h2>
-
-        <div className="grid grid-cols-1 gap-x-3 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
-          {renderField({ label: "Business Name", name: "businessName", placeholder: "Enter business name", maxLength: 150 })}
-          {renderField({ label: "Store Name", name: "storeName", placeholder: "Enter store name", maxLength: 100 })}
-          {renderField({ label: "Business Category", name: "storeType", required: true, placeholder: "Enter business category", maxLength: 100 })}
-          {renderField({ label: "Sub Category", name: "subCategory", optional: true, placeholder: "Enter sub category" })}
-        </div>
-
-        <div className="grid grid-cols-1 gap-x-3 gap-y-3 md:grid-cols-2">
-          {renderField({ label: "GST Number", name: "gstNumber", optional: true, disabled: true, placeholder: "Not provided", hint: "Verified at approval. Contact support to change." })}
-          {renderField({ label: "PAN Number", name: "panNumber", required: true, disabled: true, placeholder: "Not provided", hint: "Verified at approval. Contact support to change." })}
-        </div>
-
-        <fieldset className="m-0 border-0 p-0">
-          <legend className="p-0 text-sm font-bold text-gray-900">Business Type</legend>
-          <div className="mt-2 flex gap-5">
-            {BUSINESS_TYPES.map((type) => (
-              <label key={type} className="flex cursor-pointer items-center gap-1.5 text-sm">
-                <input
-                  type="radio"
-                  name="businessType"
-                  value={type}
-                  checked={values.businessType === type}
-                  onChange={handleChange}
-                  className="accent-green-700"
-                />
-                <span>{type}</span>
-              </label>
-            ))}
-          </div>
-        </fieldset>
-
-        {renderField({
-          label: "Store Description",
-          name: "storeDescription",
-          as: "textarea",
-          placeholder: "Describe your store and what you sell",
-          maxLength: 1000,
-          rows: 4,
-          hint: `${values.storeDescription.length}/1000`,
-        })}
-      </section>
-
-      <section className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-3">
-        <h2 className="m-0 text-sm font-bold text-gray-900">Business Address</h2>
-
-        <div className="grid grid-cols-1 gap-x-3 gap-y-3 md:grid-cols-2">
-          {renderField({ label: "City", name: "city", required: true, placeholder: "Enter city" })}
-          {renderField({ label: "State", name: "state", required: true, placeholder: "Enter state" })}
-          {renderField({ label: "Pin code", name: "pinCode", required: true, placeholder: "6-digit pin code", maxLength: 6 })}
-          {renderField({ label: "Country", name: "country", required: true, placeholder: "Enter country" })}
-        </div>
-
-        {renderField({ label: "Address 1", name: "address1", as: "textarea", required: true, placeholder: "House no, Building, street, area", rows: 4 })}
-      </section>
-
-      <div className="flex flex-col gap-1.5">
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className="flex h-32 w-36 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-lg border border-gray-300 bg-white p-0 text-xs text-gray-400 hover:border-amber-400"
-        >
-          {coverPreview ? (
-            <img src={coverPreview} alt="Cover preview" className="h-full w-full object-cover" />
-          ) : (
-            <>
-              <Upload size={26} />
-              <span>Upload Cover Image</span>
-              <span>PNG, JPG</span>
-              <span>(Max 2MB)</span>
-            </>
-          )}
-        </button>
-        <input ref={fileInputRef} type="file" accept="image/png,image/jpeg" hidden onChange={handlePickImage} />
-        {coverError && <p className="m-0 text-xs text-red-600">{coverError}</p>}
-      </div>
-
-      {banner && <p className={`m-0 rounded-md px-3 py-2 text-sm ${banner.type === "success" ? "border border-green-200 bg-green-50 text-green-800" : "border border-red-200 bg-red-50 text-red-700"}`} role={banner.type === "error" ? "alert" : "status"}>{banner.text}</p>}
-
-      <div className="flex flex-col-reverse gap-3 md:flex-row md:justify-end">
-        <button
-          type="button"
-          onClick={handleCancel}
-          disabled={!dirty || saving}
-          className="h-12 w-full cursor-pointer rounded border border-gray-900 bg-white text-base font-medium text-gray-900 disabled:cursor-not-allowed disabled:opacity-60 md:w-[180px]"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={!dirty || saving}
-          className="h-12 w-full cursor-pointer rounded border border-green-700 bg-green-700 text-base font-medium text-white disabled:cursor-not-allowed disabled:opacity-60 md:w-[180px]"
-        >
-          {saving ? "Saving..." : "Save"}
-        </button>
-      </div>
-    </div>
-  );
+  const focusEdit = () => requestAnimationFrame(() => editButtonRef.current?.focus());
+  const beginEdit = () => { setValues(saved); setErrors({}); setBanner(null); setEditing(true); requestAnimationFrame(() => firstInputRef.current?.focus()); };
+  const cancel = () => { if (dirty && !window.confirm("Discard your changes?")) return; setValues(saved); setErrors({}); setEditing(false); setBanner(null); focusEdit(); };
+  const change = (event) => { const { name, value } = event.target; setValues((current) => ({ ...current, [name]: value })); setErrors((current) => ({ ...current, [name]: undefined })); };
+  const save = async () => { const found = validate(values); setErrors(found); if (Object.keys(found).length || saving) return; setSaving(true); setBanner(null); try { apply(await saveBusiness(values)); setEditing(false); setBanner({ type: "success", text: "Business information updated." }); focusEdit(); } catch (error) { const parsed = parseBusinessApiError(error); setErrors((current) => ({ ...current, ...parsed.fieldErrors })); setBanner({ type: "error", text: parsed.message }); } finally { setSaving(false); } };
+  const input = ({ label, name, required, optional, locked, hint, textarea, maxLength }) => <div className="flex flex-col gap-1.5"><label htmlFor={name} className="text-sm text-gray-900">{label}{required && <span className="text-red-600"> *</span>}{optional && <span className="text-gray-700"> (optional)</span>}</label>{textarea ? <textarea id={name} name={name} value={values[name]} onChange={change} maxLength={maxLength} rows={4} className={"min-h-24 resize-y py-2 " + inputBase} /> : <input ref={name === "businessName" ? firstInputRef : undefined} id={name} name={name} value={values[name]} onChange={change} disabled={locked} maxLength={maxLength} className={inputBase} />}{hint && <p className="m-0 text-xs text-gray-500">{hint}</p>}{errors[name] && <p className="m-0 text-xs text-red-600" role="alert">{errors[name]}</p>}</div>;
+  const actions = <div ref={editButtonRef}><EditActions editing={editing} saving={saving} onEdit={beginEdit} onSave={save} onCancel={cancel} /></div>;
+  const heading = (title, right) => <div className="mb-5 flex items-center justify-between gap-3 border-b border-[#eee] pb-3"><h2 className="m-0 text-base font-semibold text-[#222]">{title}</h2>{right}</div>;
+  if (loading) return <div className="max-w-[1100px] pb-8 pt-2"><h1 className="m-0 text-[26px] font-bold text-gray-900 sm:text-[32px]">Business Information</h1><p className="mt-4 text-sm text-gray-500">Loading business information…</p></div>;
+  if (loadFailed) return <div className="max-w-[1100px] pb-8 pt-2"><h1 className="m-0 text-[26px] font-bold text-gray-900 sm:text-[32px]">Business Information</h1><p className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{banner?.text || "Unable to load business information."}</p><button type="button" onClick={load} className="mt-3 rounded border border-gray-900 bg-white px-4 py-2 text-sm font-semibold">Retry</button></div>;
+  return <div className="flex max-w-[1100px] flex-col gap-4 pb-8 pt-1"><header><h1 className="m-0 text-[26px] font-bold text-gray-900 sm:text-[32px]">Business Information</h1><p className="mb-0 mt-1 text-sm text-gray-800">Manage your personal and store profile information.</p></header>{banner && <p className={"m-0 rounded-md px-3 py-2 text-sm " + (banner.type === "success" ? "border border-green-200 bg-green-50 text-green-800" : "border border-red-200 bg-red-50 text-red-700")} role={banner.type === "error" ? "alert" : "status"}>{banner.text}</p>}<section className="rounded-xl border border-gray-200 bg-white p-3">{heading("Store Details", actions)}{editing ? <><div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">{input({ label: "Business Name", name: "businessName", maxLength: 150 })}{input({ label: "Store Name", name: "storeName", maxLength: 100 })}<div className="flex flex-col gap-1.5"><label htmlFor="storeType" className="text-sm text-gray-900">Business Category<span className="text-red-600"> *</span></label><select id="storeType" name="storeType" value={values.storeType} onChange={change} className={inputBase}><option value="">Select business category</option>{!BUSINESS_CATEGORIES.includes(values.storeType) && values.storeType && <option value={values.storeType}>{values.storeType}</option>}{BUSINESS_CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}</select>{errors.storeType && <p className="m-0 text-xs text-red-600" role="alert">{errors.storeType}</p>}</div>{input({ label: "Sub Category", name: "subCategory", optional: true, maxLength: 100 })}</div><div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">{input({ label: "GST Number", name: "gstNumber", optional: true, locked: true, hint: "Verified at approval. Contact support to change." })}{input({ label: "PAN Number", name: "panNumber", required: true, locked: true, hint: "Verified at approval. Contact support to change." })}</div><div className="mt-3">{input({ label: "Store Description", name: "storeDescription", textarea: true, maxLength: 1000 })}</div></> : <dl className="grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3"><ReadOnlyField label="Business Name" value={saved.businessName} /><ReadOnlyField label="Store Name" value={saved.storeName} /><ReadOnlyField label="Business Category" value={saved.storeType} /><ReadOnlyField label="Sub Category (optional)" value={saved.subCategory} /><ReadOnlyField label="GST Number (optional)" value={saved.gstNumber} hint="Verified at approval. Contact support to change." /><ReadOnlyField label="PAN Number" value={saved.panNumber} hint="Verified at approval. Contact support to change." /><ReadOnlyField label="Store Description" value={saved.storeDescription} className="lg:col-span-3" /></dl>}</section><section className="rounded-xl border border-gray-200 bg-white p-3">{heading("Business Address", editing ? <span className="text-xs text-gray-500">Required fields are marked *</span> : null)}{editing ? <div className="grid grid-cols-1 gap-3 md:grid-cols-2">{input({ label: "City", name: "city", required: true, maxLength: 100 })}{input({ label: "State", name: "state", required: true, maxLength: 100 })}{input({ label: "Pin code", name: "pinCode", required: true, maxLength: 12 })}{input({ label: "Country", name: "country", required: true, maxLength: 100 })}<div className="md:col-span-2">{input({ label: "Address 1", name: "address1", required: true, textarea: true, maxLength: 300 })}</div></div> : <dl className="grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3"><ReadOnlyField label="City" value={saved.city} /><ReadOnlyField label="State" value={saved.state} /><ReadOnlyField label="Pin code" value={saved.pinCode} /><ReadOnlyField label="Country" value={saved.country} /><ReadOnlyField label="Address 1" value={saved.address1} className="sm:col-span-2 lg:col-span-3" /></dl>}</section></div>;
 }

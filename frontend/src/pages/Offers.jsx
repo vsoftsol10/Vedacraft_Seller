@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronDown, Plus, Search, X } from "lucide-react";
-import { fetchOffers, toggleOffer } from "../api/offerapi";
+import { extendOffer, fetchOffers, reuseOffer, toggleOffer } from "../api/offerapi";
 import { getProducts } from "../api/productapi";
 
 const apiError = (error, fallback) => error?.response?.data?.message || (error?.request && !error?.response ? "Cannot reach the server. Check your connection and try again." : null) || fallback;
@@ -12,15 +12,80 @@ function ToggleSwitch({ checked, onChange, disabled }) {
 
 function OfferStatus({ offer }) {
   const isExpired = offer.status === "Expired";
-  const label = isExpired ? "Expired" : offer.isActive ? "Active" : "Inactive";
-  const color = isExpired ? "bg-red-100 text-red-700" : offer.isActive ? "bg-green-100 text-[#16803c]" : "bg-gray-100 text-gray-600";
+  const isUpcoming = offer.status === "Upcoming";
+  const label = isExpired ? "Expired" : isUpcoming ? "Upcoming" : offer.isActive ? "Active" : "Inactive";
+  const color = isExpired ? "bg-red-100 text-red-700" : isUpcoming ? "bg-amber-100 text-amber-800" : offer.isActive ? "bg-green-100 text-[#16803c]" : "bg-gray-100 text-gray-600";
   return <span className={`inline-flex rounded px-2 py-1 text-xs font-semibold ${color}`}>{label}</span>;
 }
 
 const displayDate = (value) => value ? new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value)) : "Not set";
+const dateInputValue = (value) => {
+  if (!value) return "";
+  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date(value)).filter(({ type }) => type !== "literal").map(({ type, value: part }) => [type, part]));
+  return `${parts.year}-${parts.month}-${parts.day}`;
+};
+const todayInKolkata = () => dateInputValue(new Date());
 
-function OfferDetailsModal({ offer, productsById, onClose }) {
+function OfferDetailsModal({ offer, productsById, onClose, onExtend, onReuse }) {
   const selectedProducts = (offer.productIds ?? []).map((id) => productsById.get(id)).filter(Boolean);
+  const [editMode, setEditMode] = useState(null);
+  const [dates, setDates] = useState({ startDate: dateInputValue(offer.startDate), endDate: dateInputValue(offer.endDate) });
+  const [errors, setErrors] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [serverError, setServerError] = useState("");
+  const expired = offer.status === "Expired";
+  const active = offer.status === "Active";
+  const isReusing = editMode === "reuse";
+  const isExtending = editMode === "extend";
+  const updateDate = (event) => {
+    const { name, value } = event.target;
+    setDates((current) => ({ ...current, [name]: value }));
+    setErrors((current) => ({ ...current, [name]: undefined }));
+    setServerError("");
+  };
+  const cancelEdit = () => {
+    setEditMode(null);
+    setDates({ startDate: dateInputValue(offer.startDate), endDate: dateInputValue(offer.endDate) });
+    setErrors({});
+    setServerError("");
+  };
+  const saveReuse = async () => {
+    const nextErrors = {};
+    const today = todayInKolkata();
+    if (!dates.startDate) nextErrors.startDate = "Start date is required.";
+    else if (dates.startDate < today) nextErrors.startDate = "Start date cannot be in the past.";
+    if (!dates.endDate) nextErrors.endDate = "End date is required.";
+    else if (dates.startDate && dates.endDate < dates.startDate) nextErrors.endDate = "End date must be on or after the start date.";
+    else if (dates.endDate <= today) nextErrors.endDate = "End date must be in the future.";
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length) return;
+    setSaving(true);
+    setServerError("");
+    try {
+      await onReuse(offer.id, dates);
+    } catch (error) {
+      setServerError(apiError(error, "Unable to reuse this offer."));
+    } finally {
+      setSaving(false);
+    }
+  };
+  const saveExtension = async () => {
+    const currentEndDate = dateInputValue(offer.endDate);
+    const nextErrors = {};
+    if (!dates.endDate) nextErrors.endDate = "End date is required.";
+    else if (dates.endDate <= currentEndDate) nextErrors.endDate = "End date must be later than the current end date.";
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length) return;
+    setSaving(true);
+    setServerError("");
+    try {
+      await onExtend(offer.id, { endDate: dates.endDate });
+    } catch (error) {
+      setServerError(apiError(error, "Unable to extend this offer."));
+    } finally {
+      setSaving(false);
+    }
+  };
   return <div className="fixed inset-0 z-50 flex items-start justify-end bg-black/30 p-3 sm:p-6" role="presentation" onMouseDown={onClose}>
     <section role="dialog" aria-modal="true" aria-label={`Details for ${offer.offerName}`} onMouseDown={(event) => event.stopPropagation()} className="flex max-h-full w-full max-w-[620px] flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
       <div className="overflow-y-auto px-5 pt-5 sm:px-6 sm:pt-6">
@@ -29,11 +94,11 @@ function OfferDetailsModal({ offer, productsById, onClose }) {
         <section className="border-b border-gray-200 pb-4"><div className="mb-2 flex items-center justify-between gap-3"><h3 className="m-0 font-semibold">Offer Information</h3><OfferStatus offer={offer} /></div><p className="m-0 font-medium">{offer.offerName}</p></section>
         <section className="border-b border-gray-200 pb-4"><h3 className="mb-2 mt-0 font-semibold">Offer Description</h3><p className="m-0 text-gray-600">{offer.description || "No description provided."}</p></section>
         <section className="border-b border-gray-200 pb-4"><h3 className="mb-2 mt-0 font-semibold">Discount Details</h3><p className="m-0">{offer.discountType === "percentage" ? "Percentage" : "Flat amount"}: <strong>{offer.discountLabel}</strong></p></section>
-        <section className="border-b border-gray-200 pb-4"><h3 className="mb-2 mt-0 font-semibold">Offer Details</h3><div className="grid grid-cols-2 gap-4"><div><p className="m-0 text-xs text-gray-500">Start Date</p><p className="mt-1 mb-0">{displayDate(offer.startDate)}</p></div><div><p className="m-0 text-xs text-gray-500">End Date</p><p className="mt-1 mb-0">{displayDate(offer.endDate)}</p></div></div></section>
+        <section className="border-b border-gray-200 pb-4"><h3 className="mb-2 mt-0 font-semibold">Offer Details</h3><div className="grid grid-cols-1 gap-4 sm:grid-cols-2"><div><p className="m-0 text-xs text-gray-500">Start Date</p>{isReusing ? <><input type="date" name="startDate" value={dates.startDate} min={todayInKolkata()} onChange={updateDate} className={`mt-1 h-10 w-full rounded border bg-white px-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-400/30 ${errors.startDate ? "border-red-500" : "border-gray-300"}`} />{errors.startDate && <p className="mb-0 mt-1 text-xs text-red-600">{errors.startDate}</p>}</> : <p className="mt-1 mb-0">{displayDate(offer.startDate)}</p>}</div><div><p className="m-0 text-xs text-gray-500">End Date</p>{isReusing || isExtending ? <><input type="date" name="endDate" value={dates.endDate} min={isReusing ? dates.startDate || todayInKolkata() : dateInputValue(offer.endDate)} onChange={updateDate} className={`mt-1 h-10 w-full rounded border bg-white px-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-400/30 ${errors.endDate ? "border-red-500" : "border-gray-300"}`} />{isExtending && <p className="mb-0 mt-1 text-xs text-gray-500">Currently ends on {displayDate(offer.endDate)}.</p>}{errors.endDate && <p className="mb-0 mt-1 text-xs text-red-600">{errors.endDate}</p>}</> : <p className="mt-1 mb-0">{displayDate(offer.endDate)}</p>}</div></div></section>
         <section><h3 className="mb-2 mt-0 font-semibold">Applicable On</h3>{offer.scope === "all_products" ? <p className="m-0">All Products</p> : <div className="space-y-2">{selectedProducts.map((product) => <div key={product.id} className="flex items-center gap-3 rounded-lg border border-gray-100 p-2"><img src={product.images?.cover || ""} alt="" className="h-10 w-10 rounded object-cover" /><div><p className="m-0 font-medium">{product.productName}</p><p className="m-0 text-xs text-gray-500">{product.productId}</p></div></div>)}{selectedProducts.length === 0 && <p className="m-0 text-gray-500">No selected products are available.</p>}</div>}</section>
         </div>
       </div>
-      <footer className="flex justify-end border-t border-gray-200 px-5 py-4 sm:px-6"><button type="button" onClick={onClose} className="cursor-pointer rounded border border-gray-400 bg-white px-6 py-2 text-sm font-semibold hover:bg-gray-50">Close</button></footer>
+      <footer className="flex flex-wrap justify-end gap-2 border-t border-gray-200 px-5 py-4 sm:px-6">{serverError && <p className="mr-auto self-center text-sm text-red-600" role="alert">{serverError}</p>}{editMode ? <><button type="button" onClick={cancelEdit} disabled={saving} className="cursor-pointer rounded border border-gray-400 bg-white px-5 py-2 text-sm font-semibold hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60">Cancel</button><button type="button" onClick={isReusing ? saveReuse : saveExtension} disabled={saving} className="cursor-pointer rounded border border-amber-300 bg-amber-200 px-5 py-2 text-sm font-semibold text-gray-900 hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-60">{saving ? (isReusing ? "Reusing..." : "Saving...") : (isReusing ? "Save & Reuse" : "Save")}</button></> : <>{active && <button type="button" onClick={() => setEditMode("extend")} className="cursor-pointer rounded border border-green-700 bg-green-700 px-5 py-2 text-sm font-semibold text-white hover:bg-green-800">Extend Offer</button>}{expired && <button type="button" onClick={() => setEditMode("reuse")} className="cursor-pointer rounded border border-green-700 bg-green-700 px-5 py-2 text-sm font-semibold text-white hover:bg-green-800">Reuse Offer</button>}<button type="button" onClick={onClose} className="cursor-pointer rounded border border-gray-400 bg-white px-6 py-2 text-sm font-semibold hover:bg-gray-50">Close</button></>}</footer>
     </section>
   </div>;
 }
@@ -52,7 +117,7 @@ function ProductsCell({ offer, productsById, productsLoaded, isOpen, onToggle, p
 
 export default function Offers() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true); const [loadError, setLoadError] = useState(""); const [toggleError, setToggleError] = useState(""); const [offers, setOffers] = useState([]); const [products, setProducts] = useState([]); const [productsLoaded, setProductsLoaded] = useState(false); const [query, setQuery] = useState(""); const [statusFilter, setStatusFilter] = useState(""); const [statusMenuOpen, setStatusMenuOpen] = useState(false); const [togglingId, setTogglingId] = useState(null); const [openProductsOfferId, setOpenProductsOfferId] = useState(null); const [viewOffer, setViewOffer] = useState(null); const productsPopoverRef = useRef(null); const statusMenuRef = useRef(null);
+  const [loading, setLoading] = useState(true); const [loadError, setLoadError] = useState(""); const [toggleError, setToggleError] = useState(""); const [successMessage, setSuccessMessage] = useState(""); const [offers, setOffers] = useState([]); const [products, setProducts] = useState([]); const [productsLoaded, setProductsLoaded] = useState(false); const [query, setQuery] = useState(""); const [statusFilter, setStatusFilter] = useState(""); const [statusMenuOpen, setStatusMenuOpen] = useState(false); const [togglingId, setTogglingId] = useState(null); const [openProductsOfferId, setOpenProductsOfferId] = useState(null); const [viewOffer, setViewOffer] = useState(null); const productsPopoverRef = useRef(null); const statusMenuRef = useRef(null);
   const loadOffers = async () => { setLoading(true); try { const response = await fetchOffers(); setOffers(response.data ?? []); setLoadError(""); } catch (error) { setLoadError(apiError(error, "Unable to load offers.")); } finally { setLoading(false); } };
   useEffect(() => { loadOffers(); }, []);
   useEffect(() => { let active = true; getProducts({ page: 1, limit: 100 }).then((response) => { if (active) setProducts(response.data ?? []); }).catch(() => { if (active) setProducts([]); }).finally(() => { if (active) setProductsLoaded(true); }); return () => { active = false; }; }, []);
@@ -65,5 +130,7 @@ export default function Offers() {
     return matchesSearch && matchesStatus;
   }), [offers, query, statusFilter]);
   const handleToggle = async (offer) => { const isActive = !offer.isActive; const optimisticOffer = { ...offer, isActive, status: isActive ? "Active" : "Inactive" }; setTogglingId(offer.id); setToggleError(""); setOffers((current) => current.map((item) => item.id === offer.id ? optimisticOffer : item)); try { const response = await toggleOffer(offer.id, isActive); setOffers((current) => current.map((item) => item.id === offer.id ? response.data : item)); } catch (error) { setOffers((current) => current.map((item) => item.id === offer.id ? offer : item)); setToggleError(apiError(error, "Unable to update offer status.")); } finally { setTogglingId(null); } };
-  return <div className="offers-page flex max-w-[1100px] flex-col gap-5 pb-8 pt-2"><header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><h1 className="m-0 text-[32px] font-bold text-gray-900">Offers</h1><p className="mb-0 mt-1.5 text-[15px] text-gray-800">Create and manage discounts to boost your sales.</p></div><button type="button" onClick={() => navigate("/settings/offers/new")} className="flex h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded border border-amber-300 bg-amber-200 px-5 text-sm font-semibold text-gray-900 hover:bg-amber-300"><Plus size={16} /> Create Offer</button></header><div className="flex flex-col gap-3 sm:flex-row"><label className="flex h-11 max-w-xl flex-1 items-center gap-2 rounded border border-gray-200 bg-white px-3"><Search size={16} className="shrink-0 text-gray-500" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search offers" className="w-full border-0 bg-transparent text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none" /></label><div className="relative" ref={statusMenuRef}><button type="button" onClick={() => setStatusMenuOpen((open) => !open)} aria-expanded={statusMenuOpen} className={`flex h-11 min-w-[145px] cursor-pointer items-center justify-between gap-3 rounded border bg-white px-3 text-sm ${statusFilter ? "border-green-600 text-green-800" : "border-gray-200 text-gray-800"}`}><span>{statusFilter ? `${statusFilter[0].toUpperCase()}${statusFilter.slice(1)}` : "All statuses"}</span><ChevronDown size={16} className={statusMenuOpen ? "rotate-180 transition-transform" : "transition-transform"} /></button>{statusMenuOpen && <div role="menu" className="absolute right-0 top-[calc(100%+6px)] z-20 w-[170px] rounded-lg border border-gray-200 bg-white p-1.5 shadow-[0_10px_28px_rgba(0,0,0,0.12)]">{[["", "All statuses"], ["active", "Active"], ["inactive", "Inactive"], ["expired", "Expired"]].map(([value, label]) => <button key={value || "all"} type="button" role="menuitem" onClick={() => { setStatusFilter(value); setStatusMenuOpen(false); }} className={`flex w-full cursor-pointer items-center rounded-md border-0 px-3 py-2 text-left text-sm ${statusFilter === value ? "bg-green-50 text-green-700" : "bg-transparent text-gray-700 hover:bg-gray-50"}`}>{label}</button>)}</div>}</div></div>{toggleError && <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert"><span>{toggleError}</span><button type="button" onClick={() => setToggleError("")} className="cursor-pointer border-0 bg-transparent p-0 text-red-700 underline">Dismiss</button></div>}<div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">{loadError ? <div className="flex items-center justify-between px-4 py-6 text-sm text-red-700"><span>{loadError}</span><button type="button" onClick={loadOffers} className="cursor-pointer rounded border border-red-300 bg-white px-3 py-1 text-red-700">Retry</button></div> : <table className="w-full min-w-[820px] border-collapse text-sm"><thead><tr className="border-b border-gray-200 text-left text-xs font-semibold text-gray-500"><th className="px-4 py-3 font-semibold">Offer Name</th><th className="px-4 py-3 font-semibold">Discount</th><th className="min-w-[220px] px-4 py-3 font-semibold">Product List</th><th className="px-4 py-3 font-semibold">Status</th><th className="px-4 py-3 font-semibold">Action</th><th className="px-4 py-3 font-semibold">Details</th></tr></thead><tbody>{loading ? [0, 1, 2].map((i) => <tr key={i} className="border-b border-gray-100 last:border-b-0"><td className="px-4 py-4" colSpan={6}><div className="h-4 w-full animate-pulse rounded bg-gray-100" /></td></tr>) : filteredOffers.length === 0 ? <tr><td colSpan={6} className="px-4 py-10 text-center text-sm text-gray-500">{offers.length === 0 ? "No offers yet. Click Create Offer to add one." : "No offers match your search or status filter."}</td></tr> : filteredOffers.map((offer) => <tr key={offer.id} className="border-b border-gray-100 last:border-b-0"><td className="px-4 py-3.5 text-gray-900">{offer.offerName}</td><td className="px-4 py-3.5 text-gray-700">{offer.discountLabel}</td><td className="max-w-[360px] px-4 py-3.5 text-gray-700"><ProductsCell offer={offer} productsById={productsById} productsLoaded={productsLoaded} isOpen={openProductsOfferId === offer.id} onToggle={() => setOpenProductsOfferId((current) => current === offer.id ? null : offer.id)} popoverRef={productsPopoverRef} /></td><td className="px-4 py-3.5"><OfferStatus offer={offer} /></td><td className="px-4 py-3.5"><ToggleSwitch checked={Boolean(offer.isActive)} onChange={() => handleToggle(offer)} disabled={togglingId === offer.id || offer.status === "Expired"} /></td><td className="px-4 py-3.5"><button type="button" onClick={() => setViewOffer(offer)} className="cursor-pointer rounded border border-green-200 bg-green-50 px-3 py-1.5 text-xs font-semibold text-green-700 hover:bg-green-100">View</button></td></tr>)}</tbody></table>}</div>{viewOffer && <OfferDetailsModal offer={viewOffer} productsById={productsById} onClose={() => setViewOffer(null)} />}</div>;
+  const handleReuse = async (id, dates) => { await reuseOffer(id, dates); setViewOffer(null); setSuccessMessage("Offer reused successfully"); await loadOffers(); };
+  const handleExtend = async (id, dates) => { await extendOffer(id, dates); setViewOffer(null); setSuccessMessage("Offer extended successfully"); await loadOffers(); };
+  return <div className="offers-page flex max-w-[1100px] flex-col gap-5 pb-8 pt-2"><header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><h1 className="m-0 text-[32px] font-bold text-gray-900">Offers</h1><p className="mb-0 mt-1.5 text-[15px] text-gray-800">Create and manage discounts to boost your sales.</p></div><button type="button" onClick={() => navigate("/settings/offers/new")} className="flex h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded border border-amber-300 bg-amber-200 px-5 text-sm font-semibold text-gray-900 hover:bg-amber-300"><Plus size={16} /> Create Offer</button></header><div className="flex flex-col gap-3 sm:flex-row"><label className="flex h-11 max-w-xl flex-1 items-center gap-2 rounded border border-gray-200 bg-white px-3"><Search size={16} className="shrink-0 text-gray-500" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search offers" className="w-full border-0 bg-transparent text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none" /></label><div className="relative" ref={statusMenuRef}><button type="button" onClick={() => setStatusMenuOpen((open) => !open)} aria-expanded={statusMenuOpen} className={`flex h-11 min-w-[145px] cursor-pointer items-center justify-between gap-3 rounded border bg-white px-3 text-sm ${statusFilter ? "border-green-600 text-green-800" : "border-gray-200 text-gray-800"}`}><span>{statusFilter ? `${statusFilter[0].toUpperCase()}${statusFilter.slice(1)}` : "All statuses"}</span><ChevronDown size={16} className={statusMenuOpen ? "rotate-180 transition-transform" : "transition-transform"} /></button>{statusMenuOpen && <div role="menu" className="absolute right-0 top-[calc(100%+6px)] z-20 w-[170px] rounded-lg border border-gray-200 bg-white p-1.5 shadow-[0_10px_28px_rgba(0,0,0,0.12)]">{[["", "All statuses"], ["active", "Active"], ["inactive", "Inactive"], ["expired", "Expired"]].map(([value, label]) => <button key={value || "all"} type="button" role="menuitem" onClick={() => { setStatusFilter(value); setStatusMenuOpen(false); }} className={`flex w-full cursor-pointer items-center rounded-md border-0 px-3 py-2 text-left text-sm ${statusFilter === value ? "bg-green-50 text-green-700" : "bg-transparent text-gray-700 hover:bg-gray-50"}`}>{label}</button>)}</div>}</div></div>{toggleError && <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert"><span>{toggleError}</span><button type="button" onClick={() => setToggleError("")} className="cursor-pointer border-0 bg-transparent p-0 text-red-700 underline">Dismiss</button></div>}{successMessage && <div className="flex items-center justify-between rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800" role="status"><span>{successMessage}</span><button type="button" onClick={() => setSuccessMessage("")} className="cursor-pointer border-0 bg-transparent p-0 text-green-800 underline">Dismiss</button></div>}<div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">{loadError ? <div className="flex items-center justify-between px-4 py-6 text-sm text-red-700"><span>{loadError}</span><button type="button" onClick={loadOffers} className="cursor-pointer rounded border border-red-300 bg-white px-3 py-1 text-red-700">Retry</button></div> : <table className="w-full min-w-[820px] border-collapse text-sm"><thead><tr className="border-b border-gray-200 text-left text-xs font-semibold text-gray-500"><th className="px-4 py-3 font-semibold">Offer Name</th><th className="px-4 py-3 font-semibold">Discount</th><th className="min-w-[220px] px-4 py-3 font-semibold">Product List</th><th className="px-4 py-3 font-semibold">Status</th><th className="px-4 py-3 font-semibold">Action</th><th className="px-4 py-3 font-semibold">Details</th></tr></thead><tbody>{loading ? [0, 1, 2].map((i) => <tr key={i} className="border-b border-gray-100 last:border-b-0"><td className="px-4 py-4" colSpan={6}><div className="h-4 w-full animate-pulse rounded bg-gray-100" /></td></tr>) : filteredOffers.length === 0 ? <tr><td colSpan={6} className="px-4 py-10 text-center text-sm text-gray-500">{offers.length === 0 ? "No offers yet. Click Create Offer to add one." : "No offers match your search or status filter."}</td></tr> : filteredOffers.map((offer) => <tr key={offer.id} className="border-b border-gray-100 last:border-b-0"><td className="px-4 py-3.5 text-gray-900">{offer.offerName}</td><td className="px-4 py-3.5 text-gray-700">{offer.discountLabel}</td><td className="max-w-[360px] px-4 py-3.5 text-gray-700"><ProductsCell offer={offer} productsById={productsById} productsLoaded={productsLoaded} isOpen={openProductsOfferId === offer.id} onToggle={() => setOpenProductsOfferId((current) => current === offer.id ? null : offer.id)} popoverRef={productsPopoverRef} /></td><td className="px-4 py-3.5"><OfferStatus offer={offer} /></td><td className="px-4 py-3.5"><ToggleSwitch checked={Boolean(offer.isActive)} onChange={() => handleToggle(offer)} disabled={togglingId === offer.id || offer.status === "Expired"} /></td><td className="px-4 py-3.5"><button type="button" onClick={() => setViewOffer(offer)} className="cursor-pointer rounded border border-green-200 bg-green-50 px-3 py-1.5 text-xs font-semibold text-green-700 hover:bg-green-100">View</button></td></tr>)}</tbody></table>}</div>{viewOffer && <OfferDetailsModal offer={viewOffer} productsById={productsById} onClose={() => setViewOffer(null)} onExtend={handleExtend} onReuse={handleReuse} />}</div>;
 }

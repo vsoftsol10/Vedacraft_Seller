@@ -1,15 +1,15 @@
 import { useState } from "react";
 import { Eye, EyeOff, KeyRound, Lock, LoaderCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { loginSeller } from "../api/authapi";
-import logo from "../assets/images/logo-transparent.png";
+import { loginSeller, requestPasswordReset } from "../api/authapi";
+import { saveSellerSession } from "../api/productapi";
+import loginLogo from "../assets/images/logo-login.png";
 import loginBackground from "../assets/images/seller-login-background.png";
 import loginCharacter from "../assets/images/seller-login-character.png";
 
 const inputWrapClass = "flex h-[3.2em] items-center gap-[.7em] rounded-[.6em] border border-[#e6e4de] bg-[#faf9f6] px-[1em] text-[#8a968c] transition-[border-color,box-shadow] duration-150 focus-within:border-brand-green focus-within:shadow-[0_0_0_3px_#e3f2e5]";
 const inputClass = "min-w-0 w-full border-0 bg-transparent text-[1.05em] text-[#23372a] outline-0 font-[inherit] placeholder:text-[#9aa59d]";
 const labelClass = "text-[1em] font-bold text-[#214631]";
-const REMEMBERED_SELLER_CODE_KEY = "veda_remembered_seller_code";
 
 function SpeechBubble({ className = "", children }) {
   return (
@@ -20,12 +20,22 @@ function SpeechBubble({ className = "", children }) {
   );
 }
 
+function LoginLogo() {
+  return <div className="inline-flex flex-col items-start">
+    <img src={loginLogo} alt="VedaCrafts" width="129" height="57" className="block h-auto w-[129px] max-w-full object-contain" />
+    <span className="mt-1 text-[13px] font-medium tracking-[0.02em] text-[#111111]">Connect | Collaborate | Grow</span>
+  </div>;
+}
+
 export default function Login() {
   const navigate = useNavigate();
-  const [sellerCode, setSellerCode] = useState(() => localStorage.getItem(REMEMBERED_SELLER_CODE_KEY) || "");
+  const [sellerCode, setSellerCode] = useState("");
   const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(() => Boolean(localStorage.getItem(REMEMBERED_SELLER_CODE_KEY)));
   const [showPassword, setShowPassword] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetMessage, setResetMessage] = useState("");
+  const [isResetSubmitting, setIsResetSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -38,23 +48,30 @@ export default function Login() {
       return;
     }
 
-    // Frontend-only convenience until backend authentication/session management is implemented.
-    // Never store the password; only the seller code may be remembered on this device.
-    if (rememberMe) {
-      localStorage.setItem(REMEMBERED_SELLER_CODE_KEY, sellerCode.trim());
-    } else {
-      localStorage.removeItem(REMEMBERED_SELLER_CODE_KEY);
-    }
-
     try {
       setIsSubmitting(true);
       const { seller, token } = await loginSeller({ sellerCode: sellerCode.trim(), password });
-      sessionStorage.setItem("vedacraftsSeller", JSON.stringify({ ...seller, token }));
+      saveSellerSession({ ...seller, token });
       navigate("/dashboard", { replace: true });
     } catch (requestError) {
       setError(requestError.response?.data?.message || "Unable to sign in. Please try again.");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handlePasswordResetRequest = async (event) => {
+    event.preventDefault();
+    setResetMessage("");
+    if (!resetEmail.trim()) return setResetMessage("Enter the email address associated with your seller account.");
+    try {
+      setIsResetSubmitting(true);
+      const response = await requestPasswordReset(resetEmail.trim());
+      setResetMessage(response.message);
+    } catch (requestError) {
+      setResetMessage(requestError.response?.data?.message || "Unable to request a reset link. Please try again.");
+    } finally {
+      setIsResetSubmitting(false);
     }
   };
 
@@ -66,10 +83,10 @@ export default function Login() {
       style={{ fontSize: "clamp(16px, 0.9vw, 36px)", "--panel": "44vw" }}
     >
       {/* LEFT: background + marketing content (static) + bubbles (animated) */}
-      <aside className="relative min-h-screen overflow-hidden bg-cover bg-bottom max-[800px]:hidden" style={{ backgroundImage: `url(${loginBackground})` }} aria-hidden="true">
-        {/* Marketing content is anchored as one column so the logo and copy share a left edge. */}
-        <div className="absolute left-[6%] top-[20%] max-w-[38em]">
-          <img src={logo} alt="VedaCrafts" width="129" height="70" className="mb-[2em] block h-auto w-[8.5rem] aspect-[129/70] object-contain" />
+      <aside className="relative flex min-h-screen flex-col items-start overflow-hidden bg-cover bg-bottom max-[800px]:hidden" style={{ backgroundImage: `url(${loginBackground})` }} aria-hidden="true">
+        {/* Keep the marketing copy in the panel's top flow, clear of the bottom-anchored character. */}
+        <div className="relative z-30 mt-[clamp(2rem,8vh,5rem)] ml-[6%] max-w-[38em]">
+          <div className="mb-[1.25em]"><LoginLogo /></div>
           <span className="mb-[.9em] block h-[.3em] w-[3em] rounded-full bg-[#f6c744]" aria-hidden="true" />
           <h2 className="m-0 max-w-[13em] text-balance text-[1.7em] font-bold leading-[1.1] tracking-[-0.03em] text-[#1f4a30]">Your craft deserves a bigger stage.</h2>
           <p className="mb-0 mt-[.65em] text-[.75em] leading-relaxed text-[#617665]">Join a thoughtful marketplace built for makers, artisans, and independent sellers.</p>
@@ -90,7 +107,7 @@ export default function Login() {
       <section className="relative z-30 flex min-h-dvh flex-col items-center justify-center px-4 py-6 sm:px-6 sm:py-8 min-[801px]:h-dvh" aria-labelledby="login-title">
         {/* Mobile logo remains separate because the marketing panel is hidden at this size. */}
         <div className="mb-5 flex w-full justify-center sm:hidden">
-          <img src={logo} alt="VedaCrafts" width="129" height="70" className="h-auto w-[clamp(12rem,58.7vw,13.75rem)] aspect-[129/70] object-contain" />
+          <LoginLogo />
         </div>
 
         <div className="w-full max-w-[26em] rounded-[1em] bg-white px-5 py-7 shadow-[0_14px_42px_rgba(31,70,45,0.11)] sm:px-[2.1em] sm:py-[1.8em] min-[801px]:text-[.9em]">
@@ -99,7 +116,18 @@ export default function Login() {
             <p className="mb-0 mt-[.55em] text-[.95em] text-[#718173]">Sign in to manage your seller account</p>
           </div>
 
-          <form className="grid gap-[.5em]" onSubmit={handleSubmit} noValidate>
+          {showForgotPassword ? <form className="grid gap-[.5em]" onSubmit={handlePasswordResetRequest} noValidate>
+            <h1 id="login-title" className="m-0 text-[2em] font-normal tracking-[-0.03em] text-[#214631]">Reset password</h1>
+            <p className="mb-[1em] mt-[.55em] text-[.95em] text-[#718173]">Enter your registered email and we’ll send a reset link.</p>
+            <label className={labelClass} htmlFor="reset-email">Email address</label>
+            <div className={inputWrapClass}>
+              <KeyRound size="1.3em" aria-hidden="true" />
+              <input className={inputClass} id="reset-email" type="email" autoComplete="email" placeholder="you@example.com" value={resetEmail} onChange={(event) => setResetEmail(event.target.value)} disabled={isResetSubmitting} />
+            </div>
+            {resetMessage && <p className="mb-0 mt-[.5em] text-[.95em] text-[#2f6b45]" role="status">{resetMessage}</p>}
+            <button className="mt-[1em] inline-flex h-[3.2em] cursor-pointer items-center justify-center gap-[.5em] rounded-[.6em] border-0 bg-[#f6c744] font-[inherit] text-[1.05em] font-bold text-[#1f3d2b] disabled:cursor-wait disabled:opacity-[.72]" type="submit" disabled={isResetSubmitting}>{isResetSubmitting ? "Sending..." : "Send reset link"}</button>
+            <button type="button" className="mt-[.5em] cursor-pointer border-0 bg-transparent font-[inherit] font-bold text-[#2f7d4a] hover:underline" onClick={() => { setShowForgotPassword(false); setResetMessage(""); }}>Back to sign in</button>
+          </form> : <form className="grid gap-[.5em]" onSubmit={handleSubmit} noValidate>
             <label className={`mt-[.5em] ${labelClass}`} htmlFor="seller-code">Seller Code</label>
             <div className={inputWrapClass}>
               <KeyRound size="1.3em" aria-hidden="true" />
@@ -116,11 +144,7 @@ export default function Login() {
             </div>
 
             <div className="mt-[.7em] flex items-center justify-between gap-2 text-[.875em] sm:text-[.98em]">
-              <label className="flex h-11 shrink-0 cursor-pointer items-center gap-[.6em] whitespace-nowrap text-[#5d6f62]" htmlFor="remember">
-                <input id="remember" type="checkbox" className="size-5 cursor-pointer accent-[#2f7d4a]" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} disabled={isSubmitting} />
-                Remember me
-              </label>
-              <button type="button" className="h-11 shrink-0 cursor-pointer whitespace-nowrap border-0 bg-transparent px-1 font-[inherit] font-bold text-[#2f7d4a] hover:underline">Forgot password?</button>
+              <button type="button" className="ml-auto h-11 cursor-pointer whitespace-nowrap border-0 bg-transparent px-1 font-[inherit] font-bold text-[#2f7d4a] hover:underline" onClick={() => setShowForgotPassword(true)}>Forgot password?</button>
             </div>
 
             {error && <p className="mb-0 mt-[.25em] text-[.95em] text-danger" role="alert">{error}</p>}
@@ -129,11 +153,11 @@ export default function Login() {
               {isSubmitting && <LoaderCircle className="animate-login-spin" size="1.3em" aria-hidden="true" />}
               {isSubmitting ? "Signing in..." : "Sign in"}
             </button>
-          </form>
+          </form>}
 
           <p className="mb-0 mt-[1.6em] text-center text-[.95em] text-[#718173]">
             New to Vedacraft?{" "}
-            <button type="button" className="cursor-pointer border-0 bg-transparent p-0 font-[inherit] font-bold text-[#2f7d4a] hover:underline">Become a seller</button>
+            <a href="https://test.vedacraftscommunity.in" className="font-bold text-[#2f7d4a] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2f7d4a]">Become a seller</a>
           </p>
         </div>
       </section>
