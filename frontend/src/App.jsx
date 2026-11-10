@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import { BrowserRouter, Navigate, Routes, Route, NavLink, useNavigate } from "react-router-dom";
+import { BrowserRouter, Navigate, Routes, Route, NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutGrid,
   Package,
@@ -173,7 +173,8 @@ const searchablePages = [
   { label: "Earnings", to: "/earnings", keywords: "revenue payments payout" },
   { label: "Reviews", to: "/reviews", keywords: "ratings feedback" },
   { label: "Offers", to: "/settings/offers", keywords: "discount promotion coupon deal" },
-  { label: "Settings", to: "/settings/documents", keywords: "account preferences documents" },
+  { label: "Settings", to: "/settings/profile", keywords: "account preferences settings profile" },
+  { label: "Profile", to: "/settings/profile", keywords: "profile account user personal" },
   { label: "Documents", to: "/settings/documents", keywords: "settings upload pan gst aadhaar" },
   { label: "Business Information", to: "/settings/business-information", keywords: "settings store business" },
   { label: "Bank Details", to: "/settings/bank-details", keywords: "settings payout payment account" },
@@ -221,7 +222,10 @@ function PageSearch({ onNavigate }) {
 
 function SellerPortal() {
   const navigate = useNavigate();
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const location = useLocation();
+  const isSettingsRoute = location.pathname.startsWith("/settings");
+  const [settingsOpenOverride, setSettingsOpenOverride] = useState(null);
+  const settingsOpen = settingsOpenOverride ?? isSettingsRoute;
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const headerRef = useRef(null);
   const logoRef = useRef(null);
@@ -284,10 +288,22 @@ function SellerPortal() {
           <nav className="flex-1">
             {navItems.map(({ to, label, icon: Icon }) => label === "Settings" ? (
               <div key={to}>
-                <button type="button" className={SETTINGS_BUTTON} onClick={() => { navigate("/settings/profile"); setSettingsOpen(true); }} aria-expanded={settingsOpen}>
+                <button
+                  type="button"
+                  className={`${SETTINGS_BUTTON}${isSettingsRoute ? " bg-[#e4f4e2] font-semibold text-[#2f7a3c]" : ""}`}
+                  onClick={() => {
+                    const next = !settingsOpen;
+                    setSettingsOpenOverride(next);
+                    if (next && !isSettingsRoute) {
+                      navigate("/settings/profile");
+                    }
+                  }}
+                  aria-expanded={settingsOpen}
+                >
                   <Icon size={22} /> <span className="flex-1">Settings</span><ChevronDown size={18} className={`transition-transform duration-200 ${settingsOpen ? "rotate-180" : ""}`} />
                 </button>
                 {settingsOpen && <div className="mb-2 ml-[46px] grid -mt-px gap-1">
+                  <NavLink to="/settings/profile" onClick={closeSidebar} className={({ isActive }) => `rounded-md px-3 py-2.5 text-left text-sm text-[#666] no-underline hover:bg-[#f1f8f0] hover:font-semibold hover:text-[#2f7a3c]${isActive ? " bg-[#f1f8f0] font-semibold text-[#2f7a3c]" : ""}`}>Profile</NavLink>
                   <NavLink to="/settings/documents" onClick={closeSidebar} className={({ isActive }) => `rounded-md px-3 py-2.5 text-left text-sm text-[#666] no-underline hover:bg-[#f1f8f0] hover:font-semibold hover:text-[#2f7a3c]${isActive ? " bg-[#f1f8f0] font-semibold text-[#2f7a3c]" : ""}`}>Documents</NavLink>
                   <NavLink to="/settings/business-information" onClick={closeSidebar} className={({ isActive }) => `rounded-md px-3 py-2.5 text-left text-sm text-[#666] no-underline hover:bg-[#f1f8f0] hover:font-semibold hover:text-[#2f7a3c]${isActive ? " bg-[#f1f8f0] font-semibold text-[#2f7a3c]" : ""}`}>Business Information</NavLink>
                   <NavLink to="/settings/bank-details" onClick={closeSidebar} className={({ isActive }) => `rounded-md px-3 py-2.5 text-left text-sm text-[#666] no-underline hover:bg-[#f1f8f0] hover:font-semibold hover:text-[#2f7a3c]${isActive ? " bg-[#f1f8f0] font-semibold text-[#2f7a3c]" : ""}`}>Bank Details</NavLink>
