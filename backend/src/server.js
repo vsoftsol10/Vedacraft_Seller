@@ -18,6 +18,9 @@ import documentRoutes from "./routes/documentRoutes.js";
 import { warnIfTranslationDisabled } from "./services/translationService.js";
 
 const app = express();
+// Render's edge proxy forwards the original client address in X-Forwarded-For.
+// Trust the single proxy hop so express-rate-limit can key requests by IP.
+app.set("trust proxy", 1);
 warnIfTranslationDisabled();
 const allowedOrigins = (process.env.CLIENT_ORIGIN || process.env.CLIENT_URL || "http://localhost:5173")
   .split(",")
