@@ -57,7 +57,8 @@
 //   );
 // }
 
-import { NavLink } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Package,
@@ -67,6 +68,7 @@ import {
   Star,
   Tag,
   Settings,
+  ChevronDown,
   X,
 } from "lucide-react";
 import logo from "../../assets/images/logo-transparent.png";
@@ -84,6 +86,11 @@ const navItems = [
 ];
 
 export default function Sidebar({ isOpen = false, onClose }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isSettingsActive = location.pathname.startsWith("/settings");
+  const [settingsOpenOverride, setSettingsOpenOverride] = useState(null);
+  const settingsOpen = settingsOpenOverride ?? isSettingsActive;
   return (
     <>
       {/* Backdrop, mobile only, shown while sidebar is open */}
@@ -111,24 +118,122 @@ export default function Sidebar({ isOpen = false, onClose }) {
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-1">
-          {navItems.map(({ label, icon: Icon, path }) => (
-            <NavLink
-              key={label}
-              to={path}
-              end={path === "/"}
-              onClick={onClose}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  isActive
-                    ? "bg-emerald-50 text-emerald-700"
-                    : "text-gray-600 hover:bg-gray-50"
-                }`
-              }
-            >
-              <Icon size={18} />
-              <span>{label}</span>
-            </NavLink>
-          ))}
+          {navItems.map(({ label, icon: Icon, path }) =>
+            label === "Settings" ? (
+              <div key={label}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !settingsOpen;
+                    setSettingsOpenOverride(next);
+                    if (next && !isSettingsActive) {
+                      navigate("/settings/profile");
+                    }
+                  }}
+                  className={`flex w-full items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                    isSettingsActive
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  <Icon size={18} />
+                  <span className="flex-1 text-left">{label}</span>
+                  <ChevronDown
+                    size={16}
+                    className={`transition-transform duration-200 ${
+                      settingsOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+                {settingsOpen && (
+                  <div className="ml-7 mt-1 space-y-1">
+                    <NavLink
+                      to="/settings/profile"
+                      onClick={onClose}
+                      className={({ isActive }) =>
+                        `block px-3 py-2 rounded-md text-xs font-medium transition-colors ${
+                          isActive
+                            ? "bg-emerald-50 text-emerald-700 font-semibold"
+                            : "text-gray-500 hover:bg-gray-50"
+                        }`
+                      }
+                    >
+                      Profile
+                    </NavLink>
+                    <NavLink
+                      to="/settings/documents"
+                      onClick={onClose}
+                      className={({ isActive }) =>
+                        `block px-3 py-2 rounded-md text-xs font-medium transition-colors ${
+                          isActive
+                            ? "bg-emerald-50 text-emerald-700 font-semibold"
+                            : "text-gray-500 hover:bg-gray-50"
+                        }`
+                      }
+                    >
+                      Documents
+                    </NavLink>
+                    <NavLink
+                      to="/settings/business-information"
+                      onClick={onClose}
+                      className={({ isActive }) =>
+                        `block px-3 py-2 rounded-md text-xs font-medium transition-colors ${
+                          isActive
+                            ? "bg-emerald-50 text-emerald-700 font-semibold"
+                            : "text-gray-500 hover:bg-gray-50"
+                        }`
+                      }
+                    >
+                      Business Information
+                    </NavLink>
+                    <NavLink
+                      to="/settings/bank-details"
+                      onClick={onClose}
+                      className={({ isActive }) =>
+                        `block px-3 py-2 rounded-md text-xs font-medium transition-colors ${
+                          isActive
+                            ? "bg-emerald-50 text-emerald-700 font-semibold"
+                            : "text-gray-500 hover:bg-gray-50"
+                        }`
+                      }
+                    >
+                      Bank Details
+                    </NavLink>
+                    <NavLink
+                      to="/settings/selling-location"
+                      onClick={onClose}
+                      className={({ isActive }) =>
+                        `block px-3 py-2 rounded-md text-xs font-medium transition-colors ${
+                          isActive
+                            ? "bg-emerald-50 text-emerald-700 font-semibold"
+                            : "text-gray-500 hover:bg-gray-50"
+                        }`
+                      }
+                    >
+                      Selling Location
+                    </NavLink>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <NavLink
+                key={label}
+                to={path}
+                end={path === "/"}
+                onClick={onClose}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                    isActive
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "text-gray-600 hover:bg-gray-50"
+                  }`
+                }
+              >
+                <Icon size={18} />
+                <span>{label}</span>
+              </NavLink>
+            )
+          )}
         </nav>
       </aside>
     </>

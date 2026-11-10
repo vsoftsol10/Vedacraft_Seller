@@ -1,36 +1,569 @@
-import { useCallback, useEffect, useState } from "react";
-import { Pencil } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Upload, X, LoaderCircle, CheckCircle } from "lucide-react";
 import { fetchProfile, parseApiError, saveProfile, saveSellingStatus } from "../api/profileapi";
-import ProfilePhotoUploader from "../components/profile/ProfilePhotoUploader";
 
-const EMPTY = { fullName: "", email: "", mobileNumber: "", alternateNumber: "", isSellingActive: true };
-const FIELDS = Object.keys(EMPTY);
-const INPUT = "h-12 rounded-md border border-[#d9d9d9] bg-white px-3 text-sm text-[#111] outline-none focus-visible:border-[#2b7a1d]";
-const values = (data) => ({ fullName: data?.fullName ?? "", email: data?.email ?? "", mobileNumber: data?.mobileNumber ?? "", alternateNumber: data?.alternateNumber ?? "", isSellingActive: data?.isSellingActive !== false });
+const EMPTY = {
+  fullName: "",
+  email: "",
+  mobileNumber: "",
+  alternateNumber: "",
+  isSellingActive: true,
+};
+
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/jpg"];
+const MAX_SIZE_MB = 2;
+
 function validate(form) {
   const errors = {};
-  if (form.fullName.trim().length < 2) errors.fullName = "Full name must be at least 2 characters";
-  if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) errors.email = "Enter a valid email address";
-  if (!/^[6-9]\d{9}$/.test(form.mobileNumber)) errors.mobileNumber = "Enter a valid 10-digit mobile number";
-  if (form.alternateNumber && !/^[6-9]\d{9}$/.test(form.alternateNumber)) errors.alternateNumber = "Enter a valid 10-digit mobile number";
-  else if (form.alternateNumber && form.alternateNumber === form.mobileNumber) errors.alternateNumber = "Must be different from your mobile number";
+  if (!form.fullName || form.fullName.trim().length < 2) {
+    errors.fullName = "Full name must be at least 2 characters";
+  }
+  if (!form.email || !/^\S+@\S+\.\S+$/.test(form.email.trim())) {
+    errors.email = "Enter a valid email address";
+  }
+  if (!form.mobileNumber || !/^[6-9]\d{9}$/.test(form.mobileNumber)) {
+    errors.mobileNumber = "Enter a valid 10-digit mobile number";
+  }
+  if (form.alternateNumber && !/^[6-9]\d{9}$/.test(form.alternateNumber)) {
+    errors.alternateNumber = "Enter a valid 10-digit mobile number";
+  } else if (form.alternateNumber && form.alternateNumber === form.mobileNumber) {
+    errors.alternateNumber = "Must be different from your mobile number";
+  }
   return errors;
 }
-function Field({ id, label, optional, error, ...props }) {
-  return <div className="flex flex-col gap-1.5"><label className="text-sm font-medium" htmlFor={id}>{label}{optional && <span className="font-normal text-[#9a9a9a]"> (optional)</span>}</label><input id={id} name={id} className={INPUT + (error ? " border-[#c62828]" : "")} aria-invalid={Boolean(error)} {...props} />{error && <p className="m-0 text-sm text-[#c62828]">{error}</p>}</div>;
-}
-function SellingStatus({ active, disabled, onToggle }) {
-  return <section className="mt-8 max-w-[780px]"><div className="flex items-center justify-between gap-5 rounded-xl border border-[#e5e5e5] bg-white px-5 py-4 sm:px-6"><div><h2 className="m-0 text-base font-semibold">Selling Status</h2><p className="mb-0 mt-1 text-sm text-[#666]">{active ? "Active — your store is accepting new orders." : "Inactive — your store is not accepting new orders."}</p></div><button type="button" role="switch" aria-checked={active} onClick={onToggle} disabled={disabled} className={"relative h-6 w-11 rounded-full border-0 p-0 " + (active ? "bg-[#55bd32]" : "bg-[#999]") + (disabled ? " opacity-60" : "")}><span className={"absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform " + (active ? "translate-x-5" : "")} /></button></div></section>;
-}
+
 export default function Profile() {
-  const [saved, setSaved] = useState(EMPTY), [savedImage, setSavedImage] = useState(null), [form, setForm] = useState(EMPTY), [newImage, setNewImage] = useState(null), [removeImage, setRemoveImage] = useState(false), [errors, setErrors] = useState({}), [loading, setLoading] = useState(true), [editing, setEditing] = useState(false), [saving, setSaving] = useState(false), [statusSaving, setStatusSaving] = useState(false), [banner, setBanner] = useState(null);
-  const apply = useCallback((data) => { setSaved(values(data)); setForm(values(data)); setSavedImage(data?.profileImage ?? null); setNewImage(null); setRemoveImage(false); setErrors({}); }, []);
-  useEffect(() => { let cancelled = false; fetchProfile().then((data) => { if (!cancelled) apply(data); }).catch((e) => { if (!cancelled) setBanner({ type: "error", text: parseApiError(e).message }); }).finally(() => { if (!cancelled) setLoading(false); }); return () => { cancelled = true; }; }, [apply]);
-  const dirty = FIELDS.some((key) => form[key] !== saved[key]) || newImage || removeImage;
-  const change = (event) => { const { name } = event.target; const value = name.includes("Number") ? event.target.value.replace(/\D/g, "").slice(0, 10) : event.target.value; setForm((current) => ({ ...current, [name]: value })); setErrors((current) => ({ ...current, [name]: undefined })); };
-  const toggle = async () => { if (statusSaving || saving) return; const next = !form.isSellingActive; setForm((x) => ({ ...x, isSellingActive: next })); setStatusSaving(true); try { const data = await saveSellingStatus(next); setSaved((x) => ({ ...x, isSellingActive: data.isSellingActive })); } catch (e) { setForm((x) => ({ ...x, isSellingActive: !next })); setBanner({ type: "error", text: parseApiError(e).message }); } finally { setStatusSaving(false); } };
-  const reset = () => { setForm(saved); setNewImage(null); setRemoveImage(false); setErrors({}); setBanner(null); };
-  const submit = async (event) => { event.preventDefault(); const found = validate(form); setErrors(found); if (Object.keys(found).length || saving) return; setSaving(true); setBanner(null); try { const data = await saveProfile(form, { imageFile: newImage?.file, removeImage }); apply(data); window.dispatchEvent(new Event("seller-profile-updated")); setEditing(false); setBanner({ type: "success", text: "Profile saved" }); } catch (e) { const { message, fieldErrors } = parseApiError(e); setErrors((x) => ({ ...x, ...fieldErrors })); setBanner({ type: "error", text: message }); } finally { setSaving(false); } };
-  const field = (label, value, optional) => <div key={label}><dt className="text-sm font-medium text-[#555]">{label}</dt><dd className="m-0 mt-1 text-base">{value || (optional ? "Not provided" : "-")}</dd></div>;
-  return <div className="max-w-[1100px] pb-8 pt-1 text-[#111]"><header className="mb-5 flex flex-wrap items-start justify-between gap-4"><div><h1 className="mb-1.5 mt-0 text-[2rem] font-bold leading-[1.15]">Profile</h1><p className="m-0 text-[0.9rem]">Manage your personal and store profile information.</p></div>{!loading && !editing && <button type="button" onClick={() => { reset(); setEditing(true); }} className="inline-flex h-11 items-center gap-2 rounded border border-[#2b7a1d] bg-white px-4 text-sm font-semibold text-[#2b7a1d]"><Pencil size={18} />Edit</button>}</header>{banner && <p className={"mb-5 rounded-md px-4 py-3 text-sm " + (banner.type === "success" ? "border border-[#b7dfc0] bg-[#e6f5e9] text-[#1b5e28]" : "border border-[#f5c2be] bg-[#fdecea] text-[#8e1c17]")}>{banner.text}</p>}{loading ? <p className="text-[#9a9a9a]">Loading your profile…</p> : editing ? <form onSubmit={submit} noValidate><div className="grid grid-cols-2 gap-x-5 gap-y-4 max-[768px]:grid-cols-1"><Field id="fullName" label="Full Name" value={form.fullName} error={errors.fullName} onChange={change} /><Field id="email" label="Email Address" type="email" value={form.email} error={errors.email} onChange={change} /><Field id="mobileNumber" label="Mobile Number" value={form.mobileNumber} error={errors.mobileNumber} onChange={change} /><Field id="alternateNumber" label="Alternate Number" optional value={form.alternateNumber} error={errors.alternateNumber} onChange={change} /></div><ProfilePhotoUploader imageUrl={savedImage} onSelect={async (file) => { setNewImage({ file }); setRemoveImage(false); }} onRemove={async () => { setNewImage(null); if (savedImage) setRemoveImage(true); }} isUploading={saving} /><SellingStatus active={form.isSellingActive} disabled={statusSaving || saving} onToggle={toggle} /><div className="mt-10 flex justify-end gap-3 max-[768px]:flex-col-reverse"><button type="button" onClick={() => { reset(); setEditing(false); }} className="h-12 w-[180px] rounded border border-[#111] bg-white text-base max-[768px]:w-full">Cancel</button><button type="submit" disabled={!dirty || saving} className="h-12 w-[180px] rounded border border-[#2b7a1d] bg-[#2b7a1d] text-base text-white disabled:opacity-50 max-[768px]:w-full">{saving ? "Saving…" : "Save Changes"}</button></div></form> : <><div className="grid grid-cols-1 gap-5 rounded-xl border border-[#e3e3e3] bg-white p-5 sm:grid-cols-[160px_1fr]"><div className="flex h-36 w-36 items-center justify-center overflow-hidden rounded-lg border border-[#d9d9d9] bg-[#faf9f6] text-sm text-[#9a9a9a]">{savedImage ? <img src={savedImage} alt="Profile" className="h-full w-full object-cover" /> : "No profile photo"}</div><dl className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">{field("Full Name", saved.fullName)}{field("Email Address", saved.email)}{field("Mobile Number", saved.mobileNumber)}{field("Alternate Number", saved.alternateNumber, true)}</dl></div><SellingStatus active={saved.isSellingActive} disabled={statusSaving} onToggle={toggle} /></>}</div>;
+  const [saved, setSaved] = useState(EMPTY);
+  const [savedImage, setSavedImage] = useState(null);
+  const [form, setForm] = useState(EMPTY);
+  const [newImage, setNewImage] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [removeImage, setRemoveImage] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [imageError, setImageError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [banner, setBanner] = useState(null);
+
+  // Inactive Modal State
+  const [showInactiveModal, setShowInactiveModal] = useState(false);
+  const [selectedReason, setSelectedReason] = useState("Product Arrived damaged");
+  const [additionalNote, setAdditionalNote] = useState("");
+  const [inactiveSubmitting, setInactiveSubmitting] = useState(false);
+
+  const fileInputRef = useRef(null);
+
+  const applyData = useCallback((data) => {
+    const formatted = {
+      fullName: data?.fullName ?? "",
+      email: data?.email ?? "",
+      mobileNumber: data?.mobileNumber ?? "",
+      alternateNumber: data?.alternateNumber ?? "",
+      isSellingActive: data?.isSellingActive !== false,
+    };
+    setSaved(formatted);
+    setForm(formatted);
+    setSavedImage(data?.profileImage ?? null);
+    setNewImage(null);
+    setPreviewUrl(null);
+    setRemoveImage(false);
+    setErrors({});
+    setImageError("");
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchProfile()
+      .then((data) => {
+        if (!cancelled) applyData(data);
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          setBanner({ type: "error", text: parseApiError(e).message });
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [applyData]);
+
+  // Clean up object URL when unmounting or changing preview
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    const finalVal = name.includes("Number")
+      ? value.replace(/\D/g, "").slice(0, 10)
+      : value;
+    setForm((prev) => ({ ...prev, [name]: finalVal }));
+    setErrors((prev) => ({ ...prev, [name]: undefined }));
+  };
+
+  const handleToggleSelling = () => {
+    if (form.isSellingActive) {
+      setShowInactiveModal(true);
+    } else {
+      setForm((prev) => ({ ...prev, isSellingActive: true }));
+      saveSellingStatus(true).catch(() => {});
+    }
+  };
+
+  const handleConfirmInactive = async () => {
+    setInactiveSubmitting(true);
+    try {
+      await saveSellingStatus(false);
+      setForm((prev) => ({ ...prev, isSellingActive: false }));
+      setSaved((prev) => ({ ...prev, isSellingActive: false }));
+      setShowInactiveModal(false);
+      setBanner({ type: "success", text: "Store status set to Inactive." });
+    } catch {
+      setForm((prev) => ({ ...prev, isSellingActive: false }));
+      setShowInactiveModal(false);
+    } finally {
+      setInactiveSubmitting(false);
+    }
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      setImageError("Only PNG and JPG images are allowed.");
+      return;
+    }
+    if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+      setImageError(`Image must be ${MAX_SIZE_MB}MB or smaller.`);
+      return;
+    }
+
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    setNewImage(file);
+    setRemoveImage(false);
+    setImageError("");
+  };
+
+  const handleRemovePhoto = (e) => {
+    e.stopPropagation();
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
+    setNewImage(null);
+    setRemoveImage(true);
+    setImageError("");
+  };
+
+  const handleCancel = () => {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
+    setForm(saved);
+    setNewImage(null);
+    setRemoveImage(false);
+    setErrors({});
+    setImageError("");
+    setBanner(null);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const validationErrors = validate(form);
+    setErrors(validationErrors);
+    if (Object.keys(validationErrors).length > 0) return;
+
+    setSaving(true);
+    setBanner(null);
+
+    try {
+      const data = await saveProfile(form, {
+        imageFile: newImage,
+        removeImage,
+      });
+
+      // If selling status is also modified, ensure it is in sync
+      if (form.isSellingActive !== saved.isSellingActive) {
+        try {
+          await saveSellingStatus(form.isSellingActive);
+        } catch {
+          // ignore or handled by main update
+        }
+      }
+
+      applyData(data);
+      window.dispatchEvent(new Event("seller-profile-updated"));
+      setBanner({ type: "success", text: "Profile updated successfully!" });
+    } catch (err) {
+      const { message, fieldErrors } = parseApiError(err);
+      setErrors((prev) => ({ ...prev, ...fieldErrors }));
+      setBanner({ type: "error", text: message });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const displayImage = previewUrl || (removeImage ? null : savedImage);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[300px] items-center justify-center">
+        <LoaderCircle className="h-8 w-8 animate-spin text-[#2f7a3c]" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full max-w-[1100px] py-4 text-[#111]">
+      {/* Title & Description */}
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold tracking-tight text-[#111]">Profile</h1>
+        <p className="mt-1 text-sm text-[#555]">
+          Manage your personal and store profile information.
+        </p>
+      </div>
+
+      {/* Banner */}
+      {banner && (
+        <div
+          className={`mb-6 flex items-center justify-between rounded-lg px-4 py-3 text-sm ${
+            banner.type === "success"
+              ? "border border-green-200 bg-green-50 text-green-800"
+              : "border border-red-200 bg-red-50 text-red-800"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {banner.type === "success" && <CheckCircle size={18} className="text-green-600" />}
+            <span>{banner.text}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setBanner(null)}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} noValidate>
+        {/* Form Inputs Grid */}
+        <div className="grid grid-cols-1 gap-x-8 gap-y-5 md:grid-cols-2">
+          {/* Full Name */}
+          <div>
+            <label
+              htmlFor="fullName"
+              className="mb-2 block text-base font-medium text-[#111]"
+            >
+              Full Name
+            </label>
+            <input
+              type="text"
+              id="fullName"
+              name="fullName"
+              value={form.fullName}
+              onChange={handleChange}
+              placeholder="Aarav Sharma"
+              className={`h-12 w-full rounded-lg border px-4 text-base text-[#111] placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-[#2f7a3c] ${
+                errors.fullName ? "border-red-500" : "border-gray-300 focus:border-[#2f7a3c]"
+              }`}
+            />
+            {errors.fullName && (
+              <p className="mt-1 text-sm text-red-600">{errors.fullName}</p>
+            )}
+          </div>
+
+          {/* Email Address */}
+          <div>
+            <label
+              htmlFor="email"
+              className="mb-2 block text-base font-medium text-[#111]"
+            >
+              Email Address
+            </label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={form.email}
+              onChange={handleChange}
+              placeholder="Aarav Sharma"
+              className={`h-12 w-full rounded-lg border px-4 text-base text-[#111] placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-[#2f7a3c] ${
+                errors.email ? "border-red-500" : "border-gray-300 focus:border-[#2f7a3c]"
+              }`}
+            />
+            {errors.email && (
+              <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+            )}
+          </div>
+
+          {/* Mobile Number */}
+          <div>
+            <label
+              htmlFor="mobileNumber"
+              className="mb-2 block text-base font-medium text-[#111]"
+            >
+              Mobile Number
+            </label>
+            <input
+              type="tel"
+              id="mobileNumber"
+              name="mobileNumber"
+              value={form.mobileNumber}
+              onChange={handleChange}
+              placeholder="Aarav Sharma"
+              className={`h-12 w-full rounded-lg border px-4 text-base text-[#111] placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-[#2f7a3c] ${
+                errors.mobileNumber ? "border-red-500" : "border-gray-300 focus:border-[#2f7a3c]"
+              }`}
+            />
+            {errors.mobileNumber && (
+              <p className="mt-1 text-sm text-red-600">{errors.mobileNumber}</p>
+            )}
+          </div>
+
+          {/* Alternate Number (optional ) */}
+          <div>
+            <label
+              htmlFor="alternateNumber"
+              className="mb-2 block text-base font-medium text-[#111]"
+            >
+              Alternate Number <span className="font-normal text-gray-400">(optional )</span>
+            </label>
+            <input
+              type="tel"
+              id="alternateNumber"
+              name="alternateNumber"
+              value={form.alternateNumber}
+              onChange={handleChange}
+              placeholder="Aarav Sharma"
+              className={`h-12 w-full rounded-lg border px-4 text-base text-[#111] placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-[#2f7a3c] ${
+                errors.alternateNumber ? "border-red-500" : "border-gray-300 focus:border-[#2f7a3c]"
+              }`}
+            />
+            {errors.alternateNumber && (
+              <p className="mt-1 text-sm text-red-600">{errors.alternateNumber}</p>
+            )}
+          </div>
+        </div>
+
+        {/* Upload Cover Image Box */}
+        <div className="mt-6">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            className="group relative flex h-32 w-36 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl border border-gray-300 bg-white p-3 text-center transition hover:border-gray-400"
+          >
+            {displayImage ? (
+              <>
+                <img
+                  src={displayImage}
+                  alt="Profile"
+                  className="h-full w-full rounded-lg object-cover"
+                />
+                <div className="absolute inset-0 flex items-center justify-center gap-2 rounded-xl bg-black/45 opacity-0 transition-opacity group-hover:opacity-100">
+                  <span className="text-xs font-medium text-white">Change</span>
+                  <button
+                    type="button"
+                    onClick={handleRemovePhoto}
+                    className="grid h-6 w-6 place-items-center rounded-full bg-red-600 text-white hover:bg-red-700"
+                    title="Remove photo"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <Upload size={24} className="mb-1 text-gray-400 stroke-[1.5]" />
+                <span className="text-[11px] leading-tight text-gray-400">
+                  Upload Cover Image
+                </span>
+                <span className="mt-1 text-[10px] leading-tight text-gray-400">
+                  PNG ,JPG
+                </span>
+                <span className="text-[10px] leading-tight text-gray-400">
+                  (Max 2MB)
+                </span>
+              </>
+            )}
+          </div>
+          {imageError && (
+            <p className="mt-1.5 text-xs text-red-600">{imageError}</p>
+          )}
+        </div>
+
+        {/* Selling Status */}
+        <div className="mt-8">
+          <h2 className="text-lg font-bold text-[#111]">Selling Status</h2>
+          <div className="mt-1 flex items-center justify-between">
+            <div>
+              <button
+                type="button"
+                onClick={handleToggleSelling}
+                className="text-base font-semibold text-[#111] hover:underline cursor-pointer bg-transparent border-0 p-0 text-left"
+              >
+                {form.isSellingActive ? "Active" : "Inactive"}
+              </button>
+              <p className="mt-0.5 text-sm text-[#666]">
+                {form.isSellingActive
+                  ? "Your store is currently accepting new orders"
+                  : "Your store is currently not accepting new orders"}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              role="switch"
+              aria-checked={form.isSellingActive}
+              onClick={handleToggleSelling}
+              className={`relative inline-flex h-7 w-14 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out focus:outline-none ${
+                form.isSellingActive ? "bg-[#55bd32]" : "bg-gray-300"
+              }`}
+            >
+              <span
+                aria-hidden="true"
+                className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                  form.isSellingActive ? "translate-x-7" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+
+        {/* Buttons (Cancel and Save) */}
+        <div className="mt-12 flex justify-end gap-4 pb-8">
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="h-11 min-w-[140px] rounded-lg border border-black bg-white px-6 text-base font-medium text-black transition-colors hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={saving}
+            className="h-11 min-w-[140px] rounded-lg border-0 bg-[#257d2a] px-6 text-base font-medium text-white transition-colors hover:bg-[#1f6823] disabled:opacity-50"
+          >
+            {saving ? "Saving…" : "Save"}
+          </button>
+        </div>
+      </form>
+
+      {/* Make Store Inactive Modal */}
+      {showInactiveModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setShowInactiveModal(false)}
+        >
+          <div
+            className="w-full max-w-[500px] rounded-2xl bg-white p-6 sm:p-7 shadow-2xl relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-900">
+                Make Store Inactive
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowInactiveModal(false)}
+                className="text-gray-500 hover:text-gray-700 transition-colors p-1"
+                aria-label="Close"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Subtitle */}
+            <p className="mt-2 text-sm text-gray-800 font-medium">
+              Your Store will stop accepting new orders while it is inactive
+            </p>
+
+            {/* Question */}
+            <p className="mt-4 mb-3 text-sm font-semibold text-gray-900">
+              Why are you returning this Products
+            </p>
+
+            {/* Radio Options */}
+            <div className="space-y-2.5">
+              {[
+                "Product Arrived damaged",
+                "Wrong product Recevied",
+                "Product is defective",
+                "Product is different from description",
+                "Missing items / part",
+                "Other",
+              ].map((reason) => (
+                <label
+                  key={reason}
+                  className="flex items-center gap-2.5 cursor-pointer text-sm text-gray-800"
+                >
+                  <input
+                    type="radio"
+                    name="inactiveReason"
+                    value={reason}
+                    checked={selectedReason === reason}
+                    onChange={(e) => setSelectedReason(e.target.value)}
+                    className="h-4 w-4 text-[#257d2a] focus:ring-[#257d2a] accent-[#257d2a]"
+                  />
+                  <span>{reason}</span>
+                </label>
+              ))}
+            </div>
+
+            {/* Additional Note */}
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-900 mb-1.5">
+                Additional Note ( Optional )
+              </label>
+              <textarea
+                rows={3}
+                value={additionalNote}
+                onChange={(e) => setAdditionalNote(e.target.value)}
+                placeholder="Write your reason here...."
+                className="w-full rounded-lg border border-gray-300 p-3 text-sm placeholder:text-gray-400 focus:outline-none focus:border-[#257d2a] resize-none"
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="mt-6 flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => setShowInactiveModal(false)}
+                className="flex-1 h-11 rounded-lg border border-black bg-white text-base font-semibold text-black hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={inactiveSubmitting}
+                onClick={handleConfirmInactive}
+                className="flex-1 h-11 rounded-lg border-0 bg-[#257d2a] text-base font-semibold text-white hover:bg-[#1f6823] transition-colors disabled:opacity-50"
+              >
+                {inactiveSubmitting ? "Updating..." : "Make Store Inactive"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
