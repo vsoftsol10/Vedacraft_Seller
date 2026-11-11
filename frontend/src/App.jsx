@@ -251,7 +251,7 @@ function SellerPortal() {
 
   const closeSidebar = () => setSidebarOpen(false);
   const navigateToPage = (to) => {
-    if (to.startsWith("/settings/")) setSettingsOpen(true);
+    if (to.startsWith("/settings/")) setSettingsOpenOverride(true);
     navigate(to);
     closeSidebar();
   };
