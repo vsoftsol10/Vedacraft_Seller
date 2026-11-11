@@ -45,6 +45,8 @@ export const getOrders = async (req, res, next) => {
   try {
     // Orders store product snapshots in `items`. Match those product IDs to the
     // signed-in seller's products so a seller only receives their own orders.
+    // getSellerOrders already narrows each order's items to this seller's own
+    // products and fetches only the columns required for fulfilment.
     const [{ orders }, { data: seller, error: sellerError }] = await Promise.all([
       getSellerOrders(req.seller.id),
       supabase.from(sellersTable).select("full_name, business_name, store_name, address_line1, city, state, pin_code, country").eq("id", req.seller.id).maybeSingle(),
@@ -59,7 +61,25 @@ export const getOrders = async (req, res, next) => {
       pinCode: seller.pin_code || "",
       country: seller.country || "",
     } : null;
-    return res.json({ success: true, data: orders.map((order) => ({ ...order, return_address: returnAddress })) });
+
+    // Expose only the fields the frontend needs for fulfilment.
+    // Never forward raw DB rows that may contain extra columns added later.
+    const safeOrders = orders.map(({ id, order_number, created_at, status, delivered_at, items, address, total, payment_method, product, item_count }) => ({
+      id,
+      order_number,
+      created_at,
+      status,
+      delivered_at,
+      items,
+      address,
+      total,
+      payment_method,
+      product,
+      item_count,
+      return_address: returnAddress,
+    }));
+
+    return res.json({ success: true, data: safeOrders });
   } catch (error) {
     return next(error);
   }
@@ -105,9 +125,21 @@ export const updateOrderStatus = async (req, res, next) => {
       updates.delivered_at = new Date().toISOString();
     }
 
-    const { data, error } = await supabase.from(ordersTable).update(updates).eq("id", req.params.id).select().single();
+    const { data, error } = await supabase
+      .from(ordersTable)
+      .update(updates)
+      .eq("id", req.params.id)
+      .select("id, status, delivered_at")
+      .single();
     if (error) throw error;
-    return res.json({ success: true, data });
+    return res.json({
+      success: true,
+      data: {
+        id: data.id,
+        status: data.status,
+        delivered_at: data.delivered_at,
+      },
+    });
   } catch (error) {
     return next(error);
     
