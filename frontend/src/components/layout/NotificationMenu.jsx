@@ -19,11 +19,18 @@ export default function NotificationMenu({ bellRef }) {
   const menuRef = useRef(null);
 
   const load = async () => {
-    setLoading(true);
     try { const response = await fetchNotifications(); setNotifications(response.data ?? []); } catch { /* Notification loading is non-critical. */ } finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); const intervalId = window.setInterval(load, 60_000); return () => window.clearInterval(intervalId); }, []);
+  useEffect(() => {
+    let active = true;
+    fetchNotifications()
+      .then((response) => { if (active) setNotifications(response.data ?? []); })
+      .catch(() => {})
+      .finally(() => { if (active) setLoading(false); });
+    const intervalId = window.setInterval(load, 60_000);
+    return () => { active = false; window.clearInterval(intervalId); };
+  }, []);
   useEffect(() => {
     const close = (event) => {
       if (event.type === "keydown" && event.key === "Escape") setOpen(false);

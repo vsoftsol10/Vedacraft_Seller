@@ -535,9 +535,12 @@ export default function AddProduct() {
   }, []);
 
   useEffect(() => {
-    if (isEditing || !form.productName.trim()) {
-      if (!isEditing) setForm((current) => current.sku ? { ...current, sku: "" } : current);
-      return undefined;
+    if (isEditing) return undefined;
+    if (!form.productName.trim()) {
+      const timer = setTimeout(() => {
+        setForm((current) => current.sku ? { ...current, sku: "" } : current);
+      }, 0);
+      return () => clearTimeout(timer);
     }
 
     let current = true;

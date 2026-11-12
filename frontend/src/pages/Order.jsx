@@ -198,11 +198,14 @@ export default function Order() {
   }, []);
 
   useEffect(() => {
-    if (!orderId) {
-      setSelectedOrder(null);
-      return;
-    }
-    setSelectedOrder(orders.find((order) => String(order.rawId) === orderId) ?? null);
+    const timer = setTimeout(() => {
+      if (!orderId) {
+        setSelectedOrder(null);
+        return;
+      }
+      setSelectedOrder(orders.find((order) => String(order.rawId) === orderId) ?? null);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [orderId, orders]);
 
   const closeOrderDetails = () => {
