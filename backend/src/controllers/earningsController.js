@@ -1,8 +1,16 @@
 import { getSellerOrders, matchedSellerItems } from "../services/sellerOrders.js";
 
-const itemValue = (item) => Number(item.sellingPrice || item.price || 0) * Number(item.quantity || 0);
+const itemValue = (item) => (Number(item?.sellingPrice ?? item?.price) || 0) * (Number(item?.quantity) || 0);
 
 const monthStart = (date) => new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
+
+const normalizeStatus = (status) => String(status || "").trim().toLowerCase();
+const isCancelled = (status) => ["cancelled", "canceled"].includes(normalizeStatus(status));
+const isReturned = (status) => normalizeStatus(status) === "returned";
+const isExcluded = (status) => isCancelled(status) || isReturned(status);
+
+const orderSellerValue = (order, productIds) =>
+  matchedSellerItems(order, productIds).reduce((sum, item) => sum + itemValue(item), 0);
 
 const recentOrder = (order, productIds) => {
   const items = matchedSellerItems(order, productIds);
@@ -31,6 +39,11 @@ export const getEarnings = async (req, res, next) => {
       ? orders.filter((order) => new Date(order.created_at) >= thisMonthStart)
       : orders;
 
+    // Define business rules: separate active/valid orders from cancelled and returned orders
+    const validOrders = selectedOrders.filter((order) => !isExcluded(order.status));
+    const cancelledOrders = selectedOrders.filter((order) => isCancelled(order.status));
+    const returnedOrders = selectedOrders.filter((order) => isReturned(order.status));
+
     const trendStarts = Array.from({ length: 12 }, (_, index) => {
       const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11 + index, 1));
       return date;
@@ -41,16 +54,35 @@ export const getEarnings = async (req, res, next) => {
     }));
     const trendIndex = new Map(trendStarts.map((date, index) => [`${date.getUTCFullYear()}-${date.getUTCMonth()}`, index]));
 
+    // Exclude cancelled and returned orders from 12-month revenue trend
     orders.forEach((order) => {
+      if (isExcluded(order.status)) return;
       const date = new Date(order.created_at);
       const index = trendIndex.get(`${date.getUTCFullYear()}-${date.getUTCMonth()}`);
       if (index !== undefined) {
-        trend[index].value += matchedSellerItems(order, productIds).reduce((sum, item) => sum + itemValue(item), 0);
+        trend[index].value += orderSellerValue(order, productIds);
       }
     });
 
-    const orderValue = selectedOrders.reduce(
-      (sum, order) => sum + matchedSellerItems(order, productIds).reduce((itemSum, item) => itemSum + itemValue(item), 0),
+    // Net active earnings exclude cancelled and returned orders
+    const orderValue = validOrders.reduce(
+      (sum, order) => sum + orderSellerValue(order, productIds),
+      0,
+    );
+
+    // Separately report cancelled and returned values
+    const cancelledOrderValue = cancelledOrders.reduce(
+      (sum, order) => sum + orderSellerValue(order, productIds),
+      0,
+    );
+
+    const returnedOrderValue = returnedOrders.reduce(
+      (sum, order) => sum + orderSellerValue(order, productIds),
+      0,
+    );
+
+    const grossOrderValue = selectedOrders.reduce(
+      (sum, order) => sum + orderSellerValue(order, productIds),
       0,
     );
 
@@ -59,9 +91,17 @@ export const getEarnings = async (req, res, next) => {
       data: {
         period,
         orderValue,
-        // This deliberately follows the Orders page's definition: one seller order
-        // per distinct order containing at least one of the seller's products.
-        orderCount: selectedOrders.length,
+        orderCount: validOrders.length,
+        grossOrderValue,
+        grossOrderCount: selectedOrders.length,
+        cancelledOrdersCount: cancelledOrders.length,
+        cancelledOrderValue,
+        returnedOrdersCount: returnedOrders.length,
+        returnedOrderValue,
+        deductions: {
+          cancelled: { count: cancelledOrders.length, value: cancelledOrderValue },
+          returned: { count: returnedOrders.length, value: returnedOrderValue },
+        },
         recentOrders: orders.slice(0, 10).map((order) => recentOrder(order, productIds)),
         trend,
       },

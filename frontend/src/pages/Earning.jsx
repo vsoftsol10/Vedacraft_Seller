@@ -70,7 +70,36 @@ export default function Earning() {
         <div className="mb-4 flex items-center justify-between"><h2 className="m-0 text-[16px] font-semibold">Order Value Trend</h2><span className="rounded-md border border-[#e5e5e5] px-3 py-1.5 text-[13px] text-[#666]">Last 12 months</span></div>
         {trend.some(({ value }) => Number(value) > 0) ? <ResponsiveContainer width="100%" height={240}><BarChart data={trend}><CartesianGrid vertical={false} stroke="#f0f0f0" /><XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#999" }} /><YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#999" }} /><Bar dataKey="value" fill="#6bcf7f" radius={[3, 3, 0, 0]} /></BarChart></ResponsiveContainer> : <p className="m-0 flex h-[240px] items-center justify-center text-sm text-[#6b7280]">No seller order value in the last 12 months.</p>}
       </div>
-      <div className="flex min-h-[180px] flex-col justify-center rounded-xl border border-[#eee] bg-white p-5"><h2 className="m-0 text-[16px] font-semibold">More earnings details</h2><p className="mb-0 mt-2 text-sm leading-6 text-[#666]">Commission and payout tracking are coming soon.</p></div>
+      <div className="flex flex-col justify-between rounded-xl border border-[#eee] bg-white p-5">
+        <div>
+          <h2 className="m-0 text-[16px] font-semibold">Cancelled &amp; Returned Orders</h2>
+          <p className="mb-4 mt-1 text-[13px] text-[#777]">Separately tracked and excluded from net earnings</p>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between rounded-lg bg-[#fff1f2] p-3 text-sm">
+              <div>
+                <span className="font-semibold text-[#be123c]">Cancelled</span>
+                <span className="ml-2 rounded-full bg-[#fecdd3] px-2 py-0.5 text-xs font-bold text-[#9f1239]">
+                  {Number(thisMonth?.cancelledOrdersCount) || 0}
+                </span>
+              </div>
+              <strong className="text-[#be123c]">{money(thisMonth?.cancelledOrderValue)}</strong>
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg bg-[#fffbeb] p-3 text-sm">
+              <div>
+                <span className="font-semibold text-[#b45309]">Returned</span>
+                <span className="ml-2 rounded-full bg-[#fde68a] px-2 py-0.5 text-xs font-bold text-[#92400e]">
+                  {Number(thisMonth?.returnedOrdersCount) || 0}
+                </span>
+              </div>
+              <strong className="text-[#b45309]">{money(thisMonth?.returnedOrderValue)}</strong>
+            </div>
+          </div>
+        </div>
+        <p className="mb-0 mt-4 text-[12px] text-[#888]">
+          All-time: {Number(allTime?.cancelledOrdersCount) || 0} cancelled ({money(allTime?.cancelledOrderValue)}), {Number(allTime?.returnedOrdersCount) || 0} returned ({money(allTime?.returnedOrderValue)})
+        </p>
+      </div>
     </div>
 
     <div className="rounded-xl border border-[#eee] bg-white p-5">
