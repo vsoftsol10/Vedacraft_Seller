@@ -8,3 +8,6 @@ export const requestPasswordReset = (email) =>
 
 export const resetPassword = ({ token, password }) =>
   api.post("/auth/reset-password", { token, password }).then((response) => response.data);
+
+export const changePassword = ({ currentPassword, newPassword }) =>
+  api.post("/auth/change-password", { currentPassword, newPassword }).then((response) => response.data);

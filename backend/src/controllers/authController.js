@@ -86,6 +86,7 @@ export const loginSeller = async (req, res, next) => {
         sellerCode: seller.seller_code,
         username: seller.username,
         applicationId: seller.application_id,
+        mustChangePassword: Boolean(seller.must_change_password),
       },
       token: createSellerToken(seller),
     });
@@ -151,6 +152,41 @@ export const resetPassword = async (req, res, next) => {
     if (error) throw error;
     if (!data) return res.status(400).json({ success: false, message: "This reset link is invalid or has expired. Request a new one." });
     return res.json({ success: true, message: "Your password has been reset. You can now sign in." });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const changePassword = async (req, res, next) => {
+  try {
+    const currentPassword = String(req.body?.currentPassword || "");
+    const newPassword = String(req.body?.newPassword || "");
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, message: "Current and new password are required." });
+    }
+
+    if (newPassword.length < 8 || newPassword.length > 128) {
+      return res.status(400).json({ success: false, message: "New password must be between 8 and 128 characters." });
+    }
+
+    if (currentPassword === newPassword) {
+      return res.status(400).json({ success: false, message: "New password must be different from current password." });
+    }
+
+    const { data, error } = await supabase.rpc("change_seller_password", {
+      p_application_id: req.seller.id,
+      p_current_password: currentPassword,
+      p_new_password: newPassword,
+      p_encryption_key: process.env.SELLER_PASSWORD_ENCRYPTION_KEY || "",
+    });
+
+    if (error) throw error;
+    if (!data) {
+      return res.status(400).json({ success: false, message: "Current password is incorrect." });
+    }
+
+    return res.json({ success: true, message: "Password updated successfully." });
   } catch (error) {
     return next(error);
   }

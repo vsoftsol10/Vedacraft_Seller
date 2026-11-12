@@ -20,6 +20,7 @@ import { fetchProfile } from "./api/profileapi";
 import logo from "./assets/images/logo-transparent.png";
 import NotificationMenu from "./components/layout/NotificationMenu";
 import OrderArrivalEffect from "./components/animations/NewOrderCelebration";
+import MandatoryChangePasswordModal from "./components/auth/MandatoryChangePasswordModal";
 
 const Products = lazy(() => import("./pages/Products"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -244,6 +245,10 @@ function SellerPortal() {
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
+  const [mustChangePassword, setMustChangePassword] = useState(() => {
+    return Boolean(getSellerSession()?.mustChangePassword);
+  });
+
   const logout = () => {
     clearSellerSession();
     navigate("/login", { replace: true });
@@ -258,6 +263,11 @@ function SellerPortal() {
 
   return (
       <div className="flex min-h-screen">
+        {mustChangePassword && (
+          <MandatoryChangePasswordModal
+            onPasswordChanged={() => setMustChangePassword(false)}
+          />
+        )}
         {sidebarOpen && (
           <div
             className="fixed inset-0 z-30 bg-black/40 lg:hidden"

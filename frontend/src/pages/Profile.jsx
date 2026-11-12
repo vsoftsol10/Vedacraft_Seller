@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Upload, X, LoaderCircle, CheckCircle } from "lucide-react";
+import { Upload, X, LoaderCircle, CheckCircle, Eye, EyeOff, Lock, KeyRound } from "lucide-react";
 import { fetchProfile, parseApiError, saveProfile, saveSellingStatus } from "../api/profileapi";
+import { changePassword } from "../api/authapi";
 
 const EMPTY = {
   fullName: "",
@@ -50,6 +51,49 @@ export default function Profile() {
   const [selectedReason, setSelectedReason] = useState("Product Arrived damaged");
   const [additionalNote, setAdditionalNote] = useState("");
   const [inactiveSubmitting, setInactiveSubmitting] = useState(false);
+
+  // Change Password State
+  const [pwdCurrent, setPwdCurrent] = useState("");
+  const [pwdNew, setPwdNew] = useState("");
+  const [pwdConfirm, setPwdConfirm] = useState("");
+  const [showPwdCurrent, setShowPwdCurrent] = useState(false);
+  const [showPwdNew, setShowPwdNew] = useState(false);
+  const [showPwdConfirm, setShowPwdConfirm] = useState(false);
+  const [pwdError, setPwdError] = useState("");
+  const [pwdSuccess, setPwdSuccess] = useState("");
+  const [pwdSubmitting, setPwdSubmitting] = useState(false);
+
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault();
+    setPwdError("");
+    setPwdSuccess("");
+
+    if (!pwdCurrent) {
+      return setPwdError("Please enter your current password.");
+    }
+    if (!pwdNew || pwdNew.length < 8) {
+      return setPwdError("New password must be at least 8 characters long.");
+    }
+    if (pwdNew === pwdCurrent) {
+      return setPwdError("New password must be different from your current password.");
+    }
+    if (pwdNew !== pwdConfirm) {
+      return setPwdError("New passwords do not match.");
+    }
+
+    try {
+      setPwdSubmitting(true);
+      const res = await changePassword({ currentPassword: pwdCurrent, newPassword: pwdNew });
+      setPwdSuccess(res.message || "Password updated successfully.");
+      setPwdCurrent("");
+      setPwdNew("");
+      setPwdConfirm("");
+    } catch (err) {
+      setPwdError(err.response?.data?.message || "Failed to update password. Please check your current password.");
+    } finally {
+      setPwdSubmitting(false);
+    }
+  };
 
   const fileInputRef = useRef(null);
 
@@ -466,6 +510,127 @@ export default function Profile() {
           </button>
         </div>
       </form>
+
+      {/* Change Password Section */}
+      <section className="mt-8 rounded-2xl border border-gray-200 bg-white p-6 sm:p-8 shadow-sm">
+        <div className="border-b border-gray-100 pb-4">
+          <h3 className="text-lg font-bold text-gray-900">Change Password</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            Keep your seller account secure by updating your password regularly.
+          </p>
+        </div>
+
+        {pwdSuccess && (
+          <div className="mt-4 flex items-center gap-2 rounded-lg bg-green-50 p-3 text-sm font-medium text-green-800 border border-green-200">
+            <CheckCircle className="h-5 w-5 text-green-600 shrink-0" />
+            <span>{pwdSuccess}</span>
+          </div>
+        )}
+
+        {pwdError && (
+          <div className="mt-4 flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm font-medium text-red-800 border border-red-200">
+            <span className="shrink-0 font-bold">!</span>
+            <span>{pwdError}</span>
+          </div>
+        )}
+
+        <form onSubmit={handlePasswordSubmit} className="mt-6 max-w-xl space-y-4" noValidate>
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 mb-1.5" htmlFor="profile-current-password">
+              Current Password
+            </label>
+            <div className="flex h-11 items-center rounded-lg border border-gray-300 bg-gray-50 px-3 focus-within:border-[#257d2a] focus-within:bg-white focus-within:ring-2 focus-within:ring-[#257d2a]/20">
+              <KeyRound size={18} className="text-gray-400 mr-2 shrink-0" />
+              <input
+                id="profile-current-password"
+                className="w-full border-0 bg-transparent text-sm text-gray-900 outline-none"
+                type={showPwdCurrent ? "text" : "password"}
+                placeholder="Enter current password"
+                value={pwdCurrent}
+                onChange={(e) => setPwdCurrent(e.target.value)}
+                disabled={pwdSubmitting}
+              />
+              <button
+                type="button"
+                className="text-gray-400 hover:text-gray-600 p-1"
+                onClick={() => setShowPwdCurrent(!showPwdCurrent)}
+                aria-label={showPwdCurrent ? "Hide password" : "Show password"}
+              >
+                {showPwdCurrent ? <Eye size={18} /> : <EyeOff size={18} />}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 mb-1.5" htmlFor="profile-new-password">
+              New Password
+            </label>
+            <div className="flex h-11 items-center rounded-lg border border-gray-300 bg-gray-50 px-3 focus-within:border-[#257d2a] focus-within:bg-white focus-within:ring-2 focus-within:ring-[#257d2a]/20">
+              <Lock size={18} className="text-gray-400 mr-2 shrink-0" />
+              <input
+                id="profile-new-password"
+                className="w-full border-0 bg-transparent text-sm text-gray-900 outline-none"
+                type={showPwdNew ? "text" : "password"}
+                placeholder="Minimum 8 characters"
+                value={pwdNew}
+                onChange={(e) => setPwdNew(e.target.value)}
+                disabled={pwdSubmitting}
+              />
+              <button
+                type="button"
+                className="text-gray-400 hover:text-gray-600 p-1"
+                onClick={() => setShowPwdNew(!showPwdNew)}
+                aria-label={showPwdNew ? "Hide password" : "Show password"}
+              >
+                {showPwdNew ? <Eye size={18} /> : <EyeOff size={18} />}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 mb-1.5" htmlFor="profile-confirm-password">
+              Confirm New Password
+            </label>
+            <div className="flex h-11 items-center rounded-lg border border-gray-300 bg-gray-50 px-3 focus-within:border-[#257d2a] focus-within:bg-white focus-within:ring-2 focus-within:ring-[#257d2a]/20">
+              <Lock size={18} className="text-gray-400 mr-2 shrink-0" />
+              <input
+                id="profile-confirm-password"
+                className="w-full border-0 bg-transparent text-sm text-gray-900 outline-none"
+                type={showPwdConfirm ? "text" : "password"}
+                placeholder="Re-enter new password"
+                value={pwdConfirm}
+                onChange={(e) => setPwdConfirm(e.target.value)}
+                disabled={pwdSubmitting}
+              />
+              <button
+                type="button"
+                className="text-gray-400 hover:text-gray-600 p-1"
+                onClick={() => setShowPwdConfirm(!showPwdConfirm)}
+                aria-label={showPwdConfirm ? "Hide password" : "Show password"}
+              >
+                {showPwdConfirm ? <Eye size={18} /> : <EyeOff size={18} />}
+              </button>
+            </div>
+          </div>
+
+          <div className="pt-2">
+            <button
+              type="submit"
+              disabled={pwdSubmitting}
+              className="h-11 min-w-[160px] rounded-lg border-0 bg-[#257d2a] px-6 text-sm font-semibold text-white transition-colors hover:bg-[#1f6823] disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {pwdSubmitting ? (
+                <>
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                "Change Password"
+              )}
+            </button>
+          </div>
+        </form>
+      </section>
 
       {/* Make Store Inactive Modal */}
       {showInactiveModal && (
