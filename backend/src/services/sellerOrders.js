@@ -34,12 +34,28 @@ export const getSellerOrders = async (sellerId) => {
 
   const sellerOrders = (orders ?? [])
     .filter((order) => matchedSellerItems(order, productIds).length > 0)
-    .map((order) => ({
-      ...order,
-      // Replace the full items array with only this seller's own line items so
-      // products belonging to other sellers in the same basket are never exposed.
-      items: matchedSellerItems(order, productIds),
-    }));
+    .map((order) => {
+      const items = matchedSellerItems(order, productIds);
+      const names = items.map((item) => item.name || item.product_name).filter(Boolean);
+      const sellerProduct = names.length > 1
+        ? `${names[0]} + ${names.length - 1} more`
+        : names[0] || order.product || "Product";
+      const sellerItemCount = items.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0);
+      const sellerTotal = items.reduce(
+        (sum, item) => sum + (Number(item.sellingPrice ?? item.price) || 0) * (Number(item.quantity) || 1),
+        0
+      );
+
+      return {
+        ...order,
+        // Replace full cart attributes with this seller's own slice:
+        // never show another seller's product name, line items, quantity, or total.
+        product: sellerProduct,
+        item_count: sellerItemCount,
+        total: Math.round(sellerTotal * 100) / 100,
+        items,
+      };
+    });
 
   return { productIds, orders: sellerOrders };
 };
