@@ -118,8 +118,20 @@ function ProductsCell({ offer, productsById, productsLoaded, isOpen, onToggle, p
 export default function Offers() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true); const [loadError, setLoadError] = useState(""); const [toggleError, setToggleError] = useState(""); const [successMessage, setSuccessMessage] = useState(""); const [offers, setOffers] = useState([]); const [products, setProducts] = useState([]); const [productsLoaded, setProductsLoaded] = useState(false); const [query, setQuery] = useState(""); const [statusFilter, setStatusFilter] = useState(""); const [statusMenuOpen, setStatusMenuOpen] = useState(false); const [togglingId, setTogglingId] = useState(null); const [openProductsOfferId, setOpenProductsOfferId] = useState(null); const [viewOffer, setViewOffer] = useState(null); const productsPopoverRef = useRef(null); const statusMenuRef = useRef(null);
-  const loadOffers = async () => { setLoading(true); try { const response = await fetchOffers(); setOffers(response.data ?? []); setLoadError(""); } catch (error) { setLoadError(apiError(error, "Unable to load offers.")); } finally { setLoading(false); } };
-  useEffect(() => { loadOffers(); }, []);
+  const loadOffers = async () => {
+    setLoading(true);
+    try { const response = await fetchOffers(); setOffers(response.data ?? []); setLoadError(""); }
+    catch (error) { setLoadError(apiError(error, "Unable to load offers.")); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => {
+    let active = true;
+    fetchOffers()
+      .then((response) => { if (active) { setOffers(response.data ?? []); setLoadError(""); } })
+      .catch((error) => { if (active) setLoadError(apiError(error, "Unable to load offers.")); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
   useEffect(() => { let active = true; getProducts({ page: 1, limit: 100 }).then((response) => { if (active) setProducts(response.data ?? []); }).catch(() => { if (active) setProducts([]); }).finally(() => { if (active) setProductsLoaded(true); }); return () => { active = false; }; }, []);
   useEffect(() => { const closePopover = (event) => { if (event.type === "keydown" && event.key === "Escape") setOpenProductsOfferId(null); if (event.type === "pointerdown" && productsPopoverRef.current && !productsPopoverRef.current.contains(event.target)) setOpenProductsOfferId(null); }; document.addEventListener("pointerdown", closePopover); document.addEventListener("keydown", closePopover); return () => { document.removeEventListener("pointerdown", closePopover); document.removeEventListener("keydown", closePopover); }; }, []);
   useEffect(() => { const closeStatusMenu = (event) => { if (event.type === "keydown" && event.key === "Escape") setStatusMenuOpen(false); if (event.type === "pointerdown" && !statusMenuRef.current?.contains(event.target)) setStatusMenuOpen(false); }; document.addEventListener("pointerdown", closeStatusMenu); document.addEventListener("keydown", closeStatusMenu); return () => { document.removeEventListener("pointerdown", closeStatusMenu); document.removeEventListener("keydown", closeStatusMenu); }; }, []);

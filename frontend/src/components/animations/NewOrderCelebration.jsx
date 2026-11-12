@@ -238,7 +238,9 @@ export default function NewOrderCelebration({
   const truckRef = useRef(null);
   const buttonRef = useRef(null);
   const mutedRef = useRef(muted);
-  mutedRef.current = muted;
+  useEffect(() => {
+    mutedRef.current = muted;
+  }, [muted]);
 
   // Unlock sound on the seller's first click/tap/key press (browsers block audio before that).
   useEffect(() => unlockAudioOnFirstTouch(), []);
@@ -247,7 +249,7 @@ export default function NewOrderCelebration({
   useLayoutEffect(() => {
     const el = parkedRef?.current;
     if (!el) return;
-    el.style.opacity = phase === 'driving' || phase === 'burst' ? '0' : '';
+    el.style.setProperty('opacity', phase === 'driving' || phase === 'burst' ? '0' : '');
   }, [phase, parkedRef]);
 
   // 1. Start: measure positions so it works at any screen width.
