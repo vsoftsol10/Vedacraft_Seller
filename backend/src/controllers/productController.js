@@ -453,31 +453,260 @@ export const getNextProductSku = async (req, res, next) => {
 
 export const bulkAddStock = async (req, res, next) => {
   try {
-    const updates = Array.isArray(req.body?.updates) ? req.body.updates : [];
-    if (!updates.length) return res.status(400).json({ success: false, message: "Select at least one product and enter a quantity." });
+    const rawUpdates = Array.isArray(req.body?.updates) ? req.body.updates : [];
+    if (!rawUpdates.length) {
+      return res.status(400).json({
+        success: false,
+        code: "EMPTY_UPDATES",
+        message: "Select at least one product and enter a quantity.",
+        summary: { total: 0, succeeded: 0, failed: 0 },
+        succeeded: [],
+        failed: [],
+        data: []
+      });
+    }
 
-    const result = [];
-    for (const update of updates) {
-      const quantity = Number(update.quantity);
-      if (!update.id || !Number.isInteger(quantity) || quantity <= 0) {
-        return res.status(400).json({ success: false, message: "Each stock quantity must be a whole number greater than zero." });
+    const failed = [];
+    const sanitizedUpdates = [];
+    const seenIds = new Set();
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    // 1. Upfront structural, type, range, and duplicate validation
+    for (const item of rawUpdates) {
+      const id = String(item?.id || item?.productId || "").trim();
+      const rawQty = item?.quantity;
+      const quantity = Number(rawQty);
+
+      if (!id || !UUID_REGEX.test(id)) {
+        failed.push({
+          id: id || "unknown",
+          productName: item?.productName || "Unknown Product",
+          reason: "Invalid product ID format."
+        });
+        continue;
       }
-      const { data: existing, error: findError } = await supabase
-        .from(table).select("*").eq("id", update.id).eq("seller_id", req.seller.id).maybeSingle();
-      if (findError) throw findError;
-      if (!existing) return res.status(404).json({ success: false, message: "One of the selected products was not found." });
 
-      const stockQuantity = Number(existing.stock_quantity || 0) + quantity;
-      const { data, error } = await supabase
+      if (rawQty === "" || rawQty === null || rawQty === undefined || !Number.isInteger(quantity) || quantity <= 0) {
+        failed.push({
+          id,
+          productName: item?.productName || "Product",
+          reason: "Stock quantity must be a whole number greater than zero."
+        });
+        continue;
+      }
+
+      if (quantity > 1_000_000) {
+        failed.push({
+          id,
+          productName: item?.productName || "Product",
+          reason: "Stock quantity exceeds maximum allowable update limit (1,000,000)."
+        });
+        continue;
+      }
+
+      if (seenIds.has(id.toLowerCase())) {
+        failed.push({
+          id,
+          productName: item?.productName || "Product",
+          reason: "Duplicate product ID in update list. Each product can only be specified once."
+        });
+        continue;
+      }
+
+      seenIds.add(id.toLowerCase());
+      sanitizedUpdates.push({ id, quantity });
+    }
+
+    // If any upfront validation errors exist, abort immediately — no DB modification
+    if (failed.length > 0) {
+      return res.status(400).json({
+        success: false,
+        code: "VALIDATION_FAILED",
+        message: "Validation failed for one or more products. No stock was updated.",
+        summary: {
+          total: rawUpdates.length,
+          succeeded: 0,
+          failed: failed.length
+        },
+        succeeded: [],
+        failed,
+        data: []
+      });
+    }
+
+    // 2. Fetch all matching products owned by authenticated seller in a single bulk query
+    const targetIds = sanitizedUpdates.map((u) => u.id);
+    const { data: dbProducts, error: fetchError } = await supabase
+      .from(table)
+      .select("*")
+      .in("id", targetIds)
+      .eq("seller_id", req.seller.id);
+
+    if (fetchError) throw fetchError;
+
+    const dbProductMap = new Map((dbProducts || []).map((p) => [p.id.toLowerCase(), p]));
+
+    // 3. Verify existence, ownership, and overflow for every requested item
+    for (const update of sanitizedUpdates) {
+      const existing = dbProductMap.get(update.id.toLowerCase());
+      if (!existing) {
+        failed.push({
+          id: update.id,
+          productName: "Product",
+          reason: "Product not found or you do not have permission to modify its stock."
+        });
+        continue;
+      }
+
+      const currentQty = Number(existing.stock_quantity || 0);
+      if (currentQty + update.quantity > 2_147_483_647) {
+        failed.push({
+          id: update.id,
+          productName: existing.product_name,
+          reason: "Stock quantity would exceed maximum database limit."
+        });
+      }
+    }
+
+    // If any product is missing, not owned, or overflows, abort immediately — no DB modification
+    if (failed.length > 0) {
+      return res.status(400).json({
+        success: false,
+        code: "OWNERSHIP_OR_RANGE_FAILED",
+        message: "One or more products could not be updated. No stock was modified.",
+        summary: {
+          total: rawUpdates.length,
+          succeeded: 0,
+          failed: failed.length
+        },
+        succeeded: [],
+        failed,
+        data: []
+      });
+    }
+
+    // 4. Try PostgreSQL RPC transaction first if migration 020 is applied to Supabase
+    try {
+      const { data: rpcResult, error: rpcError } = await supabase.rpc("bulk_update_seller_stock", {
+        p_seller_id: req.seller.id,
+        p_updates: sanitizedUpdates
+      });
+
+      if (!rpcError && rpcResult && typeof rpcResult === "object") {
+        if (!rpcResult.success) {
+          return res.status(400).json({
+            success: false,
+            code: rpcResult.code || "TRANSACTION_REJECTED",
+            message: rpcResult.message || "Bulk update rejected by database transaction.",
+            summary: rpcResult.summary || { total: rawUpdates.length, succeeded: 0, failed: rpcResult.failed?.length || rawUpdates.length },
+            succeeded: rpcResult.succeeded || [],
+            failed: rpcResult.failed || [],
+            data: []
+          });
+        }
+
+        const apiProducts = (rpcResult.updatedProducts || []).map((p) => toApiProduct(p));
+        return res.json({
+          success: true,
+          code: "SUCCESS",
+          message: rpcResult.message || `All ${sanitizedUpdates.length} products updated successfully.`,
+          summary: rpcResult.summary || { total: sanitizedUpdates.length, succeeded: sanitizedUpdates.length, failed: 0 },
+          succeeded: rpcResult.succeeded || [],
+          failed: [],
+          data: apiProducts
+        });
+      }
+    } catch {
+      // If RPC is not yet present on remote DB, execute all-or-nothing rollback workflow
+    }
+
+    // 5. Fallback All-or-Nothing Atomic Execution with Compensating Rollback
+    const succeeded = [];
+    const apiProducts = [];
+    const rollbackHistory = []; // stores { id, previousStock, previousStatus }
+    let hasExecutionError = false;
+    let executionErrorMessage = "";
+
+    for (const update of sanitizedUpdates) {
+      const existing = dbProductMap.get(update.id.toLowerCase());
+      const previousStock = Number(existing.stock_quantity || 0);
+      const previousStatus = existing.stock_status;
+      const newStock = previousStock + update.quantity;
+      const newStatus = stockStatusFor(newStock, existing.low_stock_alert);
+
+      const { data: updatedProduct, error: updateError } = await supabase
         .from(table)
-        .update({ stock_quantity: stockQuantity, stock_status: stockStatusFor(stockQuantity, existing.low_stock_alert) })
+        .update({
+          stock_quantity: newStock,
+          stock_status: newStatus,
+          updated_at: new Date().toISOString()
+        })
         .eq("id", existing.id)
+        .eq("seller_id", req.seller.id)
         .select()
         .single();
-      if (error) throw error;
-      result.push(toApiProduct(data));
+
+      if (updateError || !updatedProduct) {
+        hasExecutionError = true;
+        executionErrorMessage = updateError?.message || "Failed to update stock in database.";
+        break;
+      }
+
+      rollbackHistory.push({ id: existing.id, previousStock, previousStatus });
+      apiProducts.push(toApiProduct(updatedProduct));
+      succeeded.push({
+        id: existing.id,
+        productId: existing.product_id,
+        productName: existing.product_name,
+        addedQuantity: update.quantity,
+        previousStock,
+        currentStock: newStock,
+        stockStatus: newStatus
+      });
     }
-    return res.json({ success: true, data: result });
+
+    // If unexpected error occurs mid-execution, roll back all previously applied updates
+    if (hasExecutionError) {
+      for (const item of rollbackHistory) {
+        try {
+          await supabase
+            .from(table)
+            .update({
+              stock_quantity: item.previousStock,
+              stock_status: item.previousStatus,
+              updated_at: new Date().toISOString()
+            })
+            .eq("id", item.id)
+            .eq("seller_id", req.seller.id);
+        } catch (rollbackErr) {
+          console.error("Rollback compensation error for product", item.id, rollbackErr);
+        }
+      }
+
+      return res.status(500).json({
+        success: false,
+        code: "TRANSACTION_ROLLED_BACK",
+        message: `Database error during update: ${executionErrorMessage}. All changes were rolled back. No stock was modified.`,
+        summary: { total: rawUpdates.length, succeeded: 0, failed: rawUpdates.length },
+        succeeded: [],
+        failed: sanitizedUpdates.map((u) => ({
+          id: u.id,
+          productName: dbProductMap.get(u.id.toLowerCase())?.product_name || "Product",
+          reason: "Transaction rolled back due to execution failure."
+        })),
+        data: []
+      });
+    }
+
+    return res.json({
+      success: true,
+      code: "SUCCESS",
+      message: `All ${succeeded.length} products updated successfully.`,
+      summary: { total: succeeded.length, succeeded: succeeded.length, failed: 0 },
+      succeeded,
+      failed: [],
+      data: apiProducts
+    });
   } catch (error) { return next(error); }
 };
 export const deleteProduct = async (req, res, next) => {
