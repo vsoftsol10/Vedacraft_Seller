@@ -22,12 +22,18 @@ export const getSellerSession = () => {
 
 export const saveSellerSession = (session) => {
   sessionStorage.setItem(SELLER_SESSION_KEY, JSON.stringify(session));
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("seller-session-updated"));
+  }
 };
 
 export const clearSellerSession = () => {
   sessionStorage.removeItem(SELLER_SESSION_KEY);
   sessionStorage.removeItem("vedacraftsSellerSettings");
   invalidateCachedRequests();
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("seller-session-updated"));
+  }
 };
 
 api.interceptors.request.use((config) => {

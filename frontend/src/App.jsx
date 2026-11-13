@@ -249,6 +249,15 @@ function SellerPortal() {
     return Boolean(getSellerSession()?.mustChangePassword);
   });
 
+  useEffect(() => {
+    const syncState = () => {
+      setMustChangePassword(Boolean(getSellerSession()?.mustChangePassword));
+    };
+    syncState();
+    window.addEventListener("seller-session-updated", syncState);
+    return () => window.removeEventListener("seller-session-updated", syncState);
+  }, [location.pathname]);
+
   const logout = () => {
     clearSellerSession();
     navigate("/login", { replace: true });
