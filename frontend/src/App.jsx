@@ -228,10 +228,23 @@ function SellerPortal() {
   const [settingsOpenOverride, setSettingsOpenOverride] = useState(null);
   const settingsOpen = settingsOpenOverride ?? isSettingsRoute;
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mustChangePassword, setMustChangePassword] = useState(() => {
+    return Boolean(getSellerSession()?.mustChangePassword);
+  });
   const headerRef = useRef(null);
   const logoRef = useRef(null);
   const bellRef = useRef(null);
   const parkedTruckRef = useRef(null);
+
+  useEffect(() => {
+    const syncState = () => {
+      setMustChangePassword(Boolean(getSellerSession()?.mustChangePassword));
+    };
+    syncState();
+    window.addEventListener("seller-session-updated", syncState);
+    return () => window.removeEventListener("seller-session-updated", syncState);
+  }, [location.pathname]);
+
   let sellerId = null;
   let isAuthenticated = false;
   try {
@@ -244,19 +257,6 @@ function SellerPortal() {
   }
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-
-  const [mustChangePassword, setMustChangePassword] = useState(() => {
-    return Boolean(getSellerSession()?.mustChangePassword);
-  });
-
-  useEffect(() => {
-    const syncState = () => {
-      setMustChangePassword(Boolean(getSellerSession()?.mustChangePassword));
-    };
-    syncState();
-    window.addEventListener("seller-session-updated", syncState);
-    return () => window.removeEventListener("seller-session-updated", syncState);
-  }, [location.pathname]);
 
   const logout = () => {
     clearSellerSession();
