@@ -4,4 +4,4 @@ build/
 .env
 .env.local
 *.log
-
+backend/backups/
