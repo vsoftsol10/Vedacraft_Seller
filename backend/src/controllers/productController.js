@@ -6,7 +6,7 @@ import { automaticTranslationAvailable, translateTexts } from "../services/trans
 const table = "seller_products";
 const categoriesTable = "categories";
 const translationsTable = "product_translations";
-const LANGUAGES = new Set(["en", "ta", "hi"]);
+const LANGUAGES = new Set(["en", "ta", "hi", "te", "ml"]);
 const TRANSLATION_COLUMNS = ["product_name", "material", "description", "benefits", "highlights", "how_to_use", "care_instruction"];
 const TRANSLATION_LIMITS = { productName: 200, material: 200, description: 5000, benefits: 5000, highlights: 5000, howToUse: 5000, careInstruction: 5000 };
 const TRANSLATION_FIELD_MAP = { productName: "product_name", material: "material", description: "description", benefits: "benefits", highlights: "highlights", howToUse: "how_to_use", careInstruction: "care_instruction" };
@@ -55,7 +55,7 @@ const getCurrentCategories = async () => {
 const hasText = (value) => typeof value === "string" ? value.trim().length > 0 : value !== null && value !== undefined;
 const languageFrom = (value) => LANGUAGES.has(value) ? value : "en";
 const translationPayload = (body = {}, source = "manual", status = "ok") => ({ product_name: nullableText(body.productName), material: nullableText(body.material), description: nullableText(body.description), benefits: nullableText(body.benefits), highlights: nullableText(body.highlights), how_to_use: nullableText(body.howToUse), care_instruction: nullableText(body.careInstruction), source, status });
-const translationForApi = (row) => row && ({ language: row.language, productName: row.product_name, material: row.material, description: row.description, benefits: row.benefits, highlights: row.highlights, howToUse: row.how_to_use, careInstruction: row.care_instruction, source: row.source, status: row.status || "ok" });
+const translationForApi = (row) => row && ({ language: row.language, productName: row.product_name, material: row.material, description: row.description, benefits: row.benefits, highlights: row.highlights, howToUse: row.how_to_use, careInstruction: row.care_instruction, source: row.source === "automatic" ? "auto" : row.source, status: row.status || "ok" });
 const applyTranslation = (product, translation) => {
   if (!translation) return product;
   const next = { ...product };
@@ -135,9 +135,13 @@ const autoTranslateProduct = async (product, { columns = TRANSLATION_COLUMNS, fo
     try {
       const results = await translateTexts({ texts, sourceLang: sourceLanguage, targetLang: targetLanguage }); const translated = {};
       slots.forEach(([field, index, list], resultIndex) => { if (index === null) translated[field] = results[resultIndex]; else { const next = translated[field] ? JSON.parse(translated[field]) : [...list]; next[index] = results[resultIndex]; translated[field] = JSON.stringify(next); } });
-      const payload = translationPayload(translated, "auto", "ok");
+      const payload = translationPayload(translated, "automatic", "ok");
       const { error } = await supabase.from(translationsTable).upsert({ product_id: product.id, language: targetLanguage, ...payload }, { onConflict: "product_id,language" }); if (error) throw error;
-    } catch (error) { warnings.push(`${targetLanguage}: ${error.code || "translation failed"}`); await supabase.from(translationsTable).upsert({ product_id: product.id, language: targetLanguage, source: current?.source || "auto", status: "failed" }, { onConflict: "product_id,language" }); }
+    } catch (error) {
+      console.error(`autoTranslateProduct error for ${targetLanguage}:`, error?.message || error);
+      warnings.push(`${targetLanguage}: ${error.code || "translation failed"}`);
+      await supabase.from(translationsTable).upsert({ product_id: product.id, language: targetLanguage, source: current?.source || "automatic", status: "failed" }, { onConflict: "product_id,language" });
+    }
   }
   return { disabled: false, warnings };
 };
