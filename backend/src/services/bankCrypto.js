@@ -24,3 +24,25 @@ export const encryptBankAccountNumber = (accountNumber) => {
   const tag = cipher.getAuthTag();
   return `v1.${iv.toString("base64url")}.${ciphertext.toString("base64url")}.${tag.toString("base64url")}`;
 };
+
+export const decryptBankAccountNumber = (formattedCiphertext) => {
+  if (typeof formattedCiphertext !== "string" || !formattedCiphertext) {
+    throw new Error("Invalid ciphertext string.");
+  }
+  const parts = formattedCiphertext.split(".");
+  if (parts.length !== 4 || parts[0] !== "v1") {
+    throw new Error("Unsupported or corrupted ciphertext version format.");
+  }
+
+  const iv = Buffer.from(parts[1], "base64url");
+  const ciphertext = Buffer.from(parts[2], "base64url");
+  const tag = Buffer.from(parts[3], "base64url");
+
+  if (iv.length !== 12) throw new Error("Invalid IV length for AES-256-GCM.");
+  if (tag.length !== 16) throw new Error("Invalid auth tag length for AES-256-GCM.");
+
+  const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
+  decipher.setAuthTag(tag);
+  const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+  return decrypted.toString("utf8");
+};

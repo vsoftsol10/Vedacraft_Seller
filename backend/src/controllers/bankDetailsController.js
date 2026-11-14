@@ -11,6 +11,7 @@ const clean = (value) => String(value ?? "").trim().replace(/\s+/g, " ");
 
 const toBankDetails = (seller) => {
   const last4 = seller.account_number_last4 || "";
+  const isCompleteNumericAccount = Boolean(seller.account_number_encrypted) && /^\d{4}$/.test(last4);
   return {
     accountHolderName: seller.account_holder_name || "",
     ifscCode: seller.ifsc_code || "",
@@ -18,7 +19,8 @@ const toBankDetails = (seller) => {
     branchName: seller.branch_name || "",
     accountType: seller.account_type || "",
     accountNumberLast4: last4,
-    hasBankDetails: Boolean(seller.account_number_encrypted || last4),
+    hasBankDetails: isCompleteNumericAccount,
+    isPendingUpdate: Boolean(seller.account_number_encrypted && !isCompleteNumericAccount),
   };
 };
 
