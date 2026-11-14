@@ -468,7 +468,13 @@ const initialState = {
   howToUse: [""],
   careInstruction: [""],
 };
-const LANGUAGE_OPTIONS = [{ code: "en", label: "English" }, { code: "ta", label: "Tamil" }, { code: "hi", label: "Hindi" }];
+const LANGUAGE_OPTIONS = [
+  { code: "en", label: "English" },
+  { code: "ta", label: "Tamil" },
+  { code: "hi", label: "Hindi" },
+  { code: "te", label: "Telugu" },
+  { code: "ml", label: "Malayalam" },
+];
 // New products are stored as JSON lists. The fallback also keeps products
 // created before this change editable (their text becomes one or more entries).
 const listFromValue = (value, fallbackCount = 1) => {
@@ -780,7 +786,7 @@ export default function AddProduct() {
         <section className={CARD}>
           <h3 className={CARD_TITLE}>Translations</h3>
           <div className="mb-4 flex flex-wrap gap-2" role="tablist" aria-label="Translation language">
-            {LANGUAGE_OPTIONS.map((language) => <button key={language.code} type="button" role="tab" aria-selected={translationLanguage === language.code} onClick={() => setTranslationLanguage(language.code)} className={`rounded-lg px-3 py-2 text-sm font-semibold ${translationLanguage === language.code ? "bg-[#2f7a3c] text-white" : "border border-[#ddd] text-[#444]"}`}>{language.label}{language.code === primaryLanguage ? " (Primary)" : ""} <span className="ml-1 rounded bg-gray-100 px-1 py-0.5 text-[10px] text-gray-700">{language.code === primaryLanguage ? "Primary" : translationMeta[language.code]?.status === "failed" ? "Translation failed" : translationMeta[language.code]?.source === "manual" ? "Edited by you" : translationMeta[language.code]?.source === "auto" ? "Auto-translated" : "Not translated"}</span></button>)}
+            {LANGUAGE_OPTIONS.map((language) => <button key={language.code} type="button" role="tab" aria-selected={translationLanguage === language.code} onClick={() => setTranslationLanguage(language.code)} className={`rounded-lg px-3 py-2 text-sm font-semibold ${translationLanguage === language.code ? "bg-[#2f7a3c] text-white" : "border border-[#ddd] text-[#444]"}`}>{language.label}{language.code === primaryLanguage ? " (Primary)" : ""} <span className="ml-1 rounded bg-gray-100 px-1 py-0.5 text-[10px] text-gray-700">{language.code === primaryLanguage ? "Primary" : translationMeta[language.code]?.status === "failed" ? "Translation failed" : translationMeta[language.code]?.source === "manual" ? "Edited by you" : (translationMeta[language.code]?.source === "auto" || translationMeta[language.code]?.source === "automatic") ? "Auto-translated" : "Not translated"}</span></button>)}
           </div>
           {translationNotice && <p className="mb-3 text-xs text-[#b76b04]">{translationNotice}</p>}{translationLanguage === primaryLanguage ? <p className="text-sm text-[#666]">Edit this primary-language content in Basic Information above.</p> : <><p className="mb-3 text-xs text-[#666]">Translations are generated automatically and shown here for review.</p>{id && <button type="button" onClick={() => { if (window.confirm("Retranslate this language? Existing translated text may be replaced.")) retryProductTranslations(id, true).then(() => getProductById(id)).then(({ translations: rows = [] }) => setTranslationMeta(Object.fromEntries(rows.map((row) => [row.language, row])))).catch((error) => setServerError(error?.response?.data?.message || "Unable to retranslate")); }} className="mb-3 rounded-lg border border-[#4f9d5d] px-3 py-2 text-xs font-semibold text-[#2f7a3c] hover:bg-[#f3faf4]">{translationMeta[translationLanguage]?.status === "failed" ? "Retry" : "Retranslate"}</button>}<TranslationFields value={translationMeta[translationLanguage]} /></>}
         </section>
