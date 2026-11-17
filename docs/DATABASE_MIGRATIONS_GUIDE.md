@@ -33,16 +33,16 @@ All migrations are idempotent (`IF NOT EXISTS`, `DROP CONSTRAINT IF EXISTS`) and
 | **010** | `010_create_notifications.sql` | `notifications` | Creates notifications queue table for seller alerts (order received, low stock alert, payment). |
 | **011** | `011_add_seller_return_address.sql` | `seller_applications` | Adds return address, pin code, state, and city columns for return shipments. |
 | **012** | `012_add_seller_selling_status.sql` | `seller_applications` | Adds `is_selling_active` boolean column enabling sellers to toggle store open/close for vacation. |
-| **013a** | `013_add_notification_audience.sql` | `notifications` | Adds target audience filtering (`all`, `seller`, `admin`) to system notifications. |
-| **013b** | `013_create_seller_password_reset.sql` | `seller_password_resets` | Creates reset token table with expiry timestamps for self-service forgot password flow. |
+| **013** | `013_add_notification_audience.sql` | `notifications` | Adds target audience filtering (`all`, `seller`, `admin`) to system notifications. |
+| **013.1** | `013_1_create_seller_password_reset.sql` | `seller_password_resets` | Creates reset token table with expiry timestamps for self-service forgot password flow. |
 | **014** | `014_add_seller_business_sub_category.sql` | `seller_applications` | Adds `business_sub_category` text column for finer artisan classification. |
 | **015** | `015_add_seller_document_statuses.sql` | `seller_documents` | Creates document verification tracking table for PAN, GST, Bank Proof with status tracking. |
 | **016** | `016_add_product_translations.sql` | `product_translations` | Creates translation storage table linking to products with language check (`en`, `ta`, `hi`). |
 | **017** | `017_add_product_translation_status.sql` | `product_translations` | Adds `status` column (`ok`, `failed`) to track translation completion. |
 | **018** | `018_seller_password_security_and_temporary_flow.sql` | `seller_credentials` | Implements temporary password workflow, forced password change on first login, and lockout protection. |
 | **019** | `019_enforce_temporary_password_default_true.sql` | `seller_credentials` | Enforces `must_change_password` default as `true` for all newly registered seller accounts. |
-| **020a** | `020_add_languages_telugu_malayalam.sql` | `seller_products`, `product_translations` | Expands primary and translated language constraints to allow all 5 languages (`en`, `ta`, `hi`, `te`, `ml`) and allows `auto`/`automatic` sources. |
-| **020b** | `020_bulk_stock_update_transaction.sql` | Function: `bulk_update_seller_stock` | Creates atomic PostgreSQL RPC transaction for bulk CSV/Excel inventory adjustments with per-item rollback safety. |
+| **020** | `020_add_languages_telugu_malayalam.sql` | `seller_products`, `product_translations` | Expands primary and translated language constraints to allow all 5 languages (`en`, `ta`, `hi`, `te`, `ml`) and allows `auto`/`automatic` sources. |
+| **021** | `021_bulk_stock_update_transaction.sql` | Function: `bulk_update_seller_stock` | Creates atomic PostgreSQL RPC transaction for bulk CSV/Excel inventory adjustments with per-item rollback safety. |
 
 ---
 

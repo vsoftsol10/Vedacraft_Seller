@@ -589,7 +589,7 @@ export const bulkAddStock = async (req, res, next) => {
       });
     }
 
-    // 4. Try PostgreSQL RPC transaction first if migration 020 is applied to Supabase
+    // 4. Try PostgreSQL RPC transaction first if migration 021 is applied to Supabase
     try {
       const { data: rpcResult, error: rpcError } = await supabase.rpc("bulk_update_seller_stock", {
         p_seller_id: req.seller.id,

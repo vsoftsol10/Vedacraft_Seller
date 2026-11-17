@@ -82,7 +82,7 @@ Detailed technical documentation is available in the [`docs/`](docs/) directory:
 | Document | Purpose |
 |---|---|
 | [**Architecture & System Flow**](docs/ARCHITECTURE_AND_SYSTEM_FLOW.md) | High-level architecture, component hierarchy, security models, and end-to-end data flows. |
-| [**Database Migrations Guide**](docs/DATABASE_MIGRATIONS_GUIDE.md) | Catalog of all 22 Supabase PostgreSQL migrations (001–020) in exact execution sequence. |
+| [**Database Migrations Guide**](docs/DATABASE_MIGRATIONS_GUIDE.md) | Catalog of all 22 Supabase PostgreSQL migrations (001–021) in exact execution sequence. |
 | [**API Contracts Reference**](docs/API_DOCUMENTATION.md) | Complete documentation of all REST endpoints: Auth, Products, Translations, Documents, Offers, Profile. |
 | [**Production Testing Audit Report**](docs/PRODUCTION_TESTING_AUDIT_REPORT.md) | Official VED-16 production audit report covering the 8 audited core seller modules. |
 

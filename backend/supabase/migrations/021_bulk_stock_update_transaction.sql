@@ -1,4 +1,4 @@
--- Migration 020: Atomic Bulk Stock Update RPC Function
+-- Migration 021: Atomic Bulk Stock Update RPC Function
 -- Supports VED-04: Validates all items, rejects duplicates/invalid inputs, locks rows,
 -- executes in a single atomic transaction block. If any error occurs, nothing commits.
 
