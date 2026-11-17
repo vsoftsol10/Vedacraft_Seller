@@ -12,7 +12,7 @@ All migrations are idempotent (`IF NOT EXISTS`, `DROP CONSTRAINT IF EXISTS`) and
 
 ```bash
 # Recommended order execution:
-001 -> 002 -> 003 -> ... -> 020
+000 -> 001 -> 002 -> 003 -> ... -> 021
 ```
 
 ---
@@ -21,6 +21,7 @@ All migrations are idempotent (`IF NOT EXISTS`, `DROP CONSTRAINT IF EXISTS`) and
 
 | Seq | Migration File | Target Table / Object | Purpose & Description |
 |---|---|---|---|
+| **000** | `000_base_schema.sql` | `seller_applications`, `seller_credentials`, `orders`, `seller_documents` | Creates initial baseline schema and core tables with IF NOT EXISTS guards for fresh environments. |
 | **001** | `001_create_products.sql` | `seller_products` | Creates base seller products table with SKU, category, prices, stock, dimensions, and initial check constraints. |
 | **002** | `002_create_product_images_storage.sql` | Storage Bucket: `product-images` | Creates public storage bucket for product cover and additional images with public read policies. |
 | **003** | `003_create_seller_login_function.sql` | Function: `authenticate_seller` | Creates PostgreSQL function for verifying seller credentials and password hashes securely inside DB. |
