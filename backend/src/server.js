@@ -45,6 +45,7 @@ app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/documents", documentRoutes);
 app.get("/", (_req, res) => res.send("Veda Crafts API is running"));
+app.get("/api/health", (_req, res) => res.json({ status: "ok", timestamp: new Date().toISOString() }));
 
 app.use((error, _req, res, _next) => {
   console.error(error);
