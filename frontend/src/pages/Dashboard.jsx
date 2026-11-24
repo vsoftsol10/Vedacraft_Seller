@@ -11,6 +11,13 @@ import { fetchProfile } from "../api/profileapi";
 
 const money = (value) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(Number(value) || 0);
 
+const getGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good Morning";
+  if (hour < 17) return "Good Afternoon";
+  return "Good Evening";
+};
+
 export default function Dashboard() {
   const [dashboard, setDashboard] = useState(null);
   const [error, setError] = useState("");
@@ -35,7 +42,7 @@ export default function Dashboard() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Good Morning, {sellerName}</h1>
+        <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">{getGreeting()}, {sellerName}</h1>
         <p className="mt-1 text-base text-gray-900 sm:text-xl">Here&apos;s what&apos;s happening with your store today</p>
       </div>
       <h2 className="mb-5 text-2xl font-bold text-gray-900">Dashboard</h2>
