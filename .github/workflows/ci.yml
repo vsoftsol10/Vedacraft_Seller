@@ -8,7 +8,7 @@ on:
 
 jobs:
   backend-tests:
-    name: Backend Tests (174 Tests)
+    name: Backend Tests (206 Tests)
     runs-on: ubuntu-latest
 
     steps:
