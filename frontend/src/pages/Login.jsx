@@ -157,14 +157,7 @@ export default function Login() {
 
           <p className="mb-0 mt-[1.6em] text-center text-[.95em] text-[#718173]">
             New to Vedacraft?{" "}
-            <a
-              href={`${import.meta.env.VITE_CUSTOMER_PORTAL_URL ?? "https://test.vedacraftscommunity.in"}/seller-registration`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-bold text-[#2f7d4a] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2f7d4a]"
-            >
-              Become a seller
-            </a>
+            <a href="https://test.vedacraftscommunity.in/seller" className="font-bold text-[#2f7d4a] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2f7d4a]">Become a seller</a>
           </p>
         </div>
       </section>
