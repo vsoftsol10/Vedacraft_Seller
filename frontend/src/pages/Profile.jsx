@@ -319,10 +319,7 @@ export default function Profile() {
               name="fullName"
               value={form.fullName}
               onChange={handleChange}
-              placeholder="Aarav Sharma"
-              className={`h-12 w-full rounded-lg border px-4 text-base text-[#111] placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-[#2f7a3c] ${
-                errors.fullName ? "border-red-500" : "border-gray-300 focus:border-[#2f7a3c]"
-              }`}
+              placeholder="Enter your full name"
             />
             {errors.fullName && (
               <p className="mt-1 text-sm text-red-600">{errors.fullName}</p>
@@ -343,10 +340,7 @@ export default function Profile() {
               name="email"
               value={form.email}
               onChange={handleChange}
-              placeholder="Aarav Sharma"
-              className={`h-12 w-full rounded-lg border px-4 text-base text-[#111] placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-[#2f7a3c] ${
-                errors.email ? "border-red-500" : "border-gray-300 focus:border-[#2f7a3c]"
-              }`}
+              placeholder="you@example.com"
             />
             {errors.email && (
               <p className="mt-1 text-sm text-red-600">{errors.email}</p>
@@ -367,7 +361,7 @@ export default function Profile() {
               name="mobileNumber"
               value={form.mobileNumber}
               onChange={handleChange}
-              placeholder="Aarav Sharma"
+              placeholder="e.g. 9876543210"
               className={`h-12 w-full rounded-lg border px-4 text-base text-[#111] placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-[#2f7a3c] ${
                 errors.mobileNumber ? "border-red-500" : "border-gray-300 focus:border-[#2f7a3c]"
               }`}
@@ -391,7 +385,7 @@ export default function Profile() {
               name="alternateNumber"
               value={form.alternateNumber}
               onChange={handleChange}
-              placeholder="Aarav Sharma"
+              placeholder="e.g. 9876543210 (optional)"
               className={`h-12 w-full rounded-lg border px-4 text-base text-[#111] placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-[#2f7a3c] ${
                 errors.alternateNumber ? "border-red-500" : "border-gray-300 focus:border-[#2f7a3c]"
               }`}
@@ -664,17 +658,17 @@ export default function Profile() {
 
             {/* Question */}
             <p className="mt-4 mb-3 text-sm font-semibold text-gray-900">
-              Why are you returning this Products
+              Why are you making your store inactive?
             </p>
 
             {/* Radio Options */}
             <div className="space-y-2.5">
               {[
-                "Product Arrived damaged",
-                "Wrong product Recevied",
-                "Product is defective",
-                "Product is different from description",
-                "Missing items / part",
+                "Going on a break / vacation",
+                "Low inventory / restocking",
+                "Personal reasons",
+                "Temporary pause",
+                "Technical issues",
                 "Other",
               ].map((reason) => (
                 <label
